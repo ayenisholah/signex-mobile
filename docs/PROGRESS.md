@@ -15,7 +15,8 @@
 - iOS App Store build `0.1.0 (3)` accepted by EAS Submit for TestFlight processing; App Store Connect app `6790819875` and the `Team (Expo)` tester group are configured.
 - Consumes the verified `@ayenisholah/signex-api-client@0.2.0` tarball exactly while GitHub Packages publication is pending.
 - Added Apple/Google native entry points, a fail-closed authentication state machine, first-Owner bootstrap, pending isolation, privileged TOTP/recovery enrollment, Secure Store refresh rotation, Owner access approval, identity linking/unlinking, session revocation, logout, and deletion UI.
-- Enabled the Sign in with Apple capability for `com.signex.mobile` and EAS-supplied Google iOS/Web OAuth configuration.
+- Declared the Sign in with Apple capability for `com.signex.mobile` and the EAS contract for Google iOS/Web OAuth configuration.
+- Replaced the cross-platform preview workflow with a gated iOS-only TestFlight build-and-submit workflow that rejects missing or inconsistent Google configuration.
 
 ## Not completed
 
@@ -27,10 +28,10 @@
 ## Blockers
 
 - Expo SDK 57 and native-auth dependencies resolve 12 moderate upstream advisories with no accepted non-breaking fix; there are no known high or critical advisories in the verified audit.
-- Non-interactive preview delivery awaits end-to-end verification of `EXPO_TOKEN` and Expo `NODE_AUTH_TOKEN`.
+- Non-interactive TestFlight delivery awaits an Expo access token, App Store Connect API key verification, and the three Google public identifiers in both EAS and the GitHub `preview` environment.
 - Google authentication builds require `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, and `GOOGLE_IOS_URL_SCHEME` plus matching Google console configuration.
 - Client publication awaits the backend versioned release workflow; the next authentication TestFlight archive awaits the backend runtime and configured provider values.
 
 ## Next verified task
 
-Complete the backend authentication runtime, publish client `0.2.0`, configure provider values, verify non-interactive preview delivery, then execute the real-iPhone social/MFA/session TestFlight matrix.
+Complete the backend authentication runtime, publish client `0.2.0`, configure provider values, verify non-interactive iOS TestFlight delivery, then execute the real-iPhone social/MFA/session matrix.

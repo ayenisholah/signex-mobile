@@ -9,5 +9,5 @@
 | Spec 11.15 offline behavior | connection/freshness state | Gap, replay, expiry and recovery tests | Not started |
 | Spec 11.16 mobile security | device-only Secure Store, memory access token and privacy controls | Device security tests and review | Credential boundary and invalidation policy implemented; device review pending |
 | Spec 17.4 mobile tests | CI and device matrix | Required checks and recorded evidence | In progress |
-| Spec 18 EAS delivery | linked EAS project, preview and TestFlight profiles | Interactive/non-interactive preview plus App Store Connect submission | iOS TestFlight delivery verified; CI preview credential path configured but disabled |
+| Spec 18 EAS delivery | linked EAS project and TestFlight profile | Fail-closed provider preflight, iOS EAS build and App Store Connect submission | Initial iOS delivery verified; iOS-only CI path configured and disabled pending provider values |
 | Spec 12.1–12.2 brand and themes | Convergent S identity and glass-aware theme primitives | Small-size asset proofs, light/dark rendering, reduced-transparency fallback, and device review | In progress |

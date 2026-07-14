@@ -1,0 +1,100 @@
+name: iOS TestFlight
+
+on:
+  workflow_run:
+    workflows: ["Mobile CI"]
+    branches: [main]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+concurrency:
+  group: ios-testflight-main
+  cancel-in-progress: true
+
+jobs:
+  build-and-submit:
+    if: vars.EAS_TESTFLIGHT_ENABLED == 'true' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
+    environment: preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Resolve source revision
+        id: source
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            echo "sha=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.source.outputs.sha }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://npm.pkg.github.com
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Validate iOS authentication configuration
+        shell: bash
+        env:
+          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
+          EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
+          GOOGLE_IOS_URL_SCHEME: ${{ vars.GOOGLE_IOS_URL_SCHEME }}
+        run: |
+          required=(
+            EXPO_PUBLIC_API_URL
+            EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
+            EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
+            GOOGLE_IOS_URL_SCHEME
+          )
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::$name is required for an iOS TestFlight build."
+              exit 1
+            fi
+          done
+          suffix=".apps.googleusercontent.com"
+          if [[ "$EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID" != *"$suffix" ]]; then
+            echo "::error::EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID has an invalid format."
+            exit 1
+          fi
+          if [[ "$EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID" != *"$suffix" ]]; then
+            echo "::error::EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID has an invalid format."
+            exit 1
+          fi
+          expected_scheme="com.googleusercontent.apps.${EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID%$suffix}"
+          if [[ "$GOOGLE_IOS_URL_SCHEME" != "$expected_scheme" ]]; then
+            echo "::error::GOOGLE_IOS_URL_SCHEME must be $expected_scheme."
+            exit 1
+          fi
+          if [[ "$EXPO_PUBLIC_API_URL" != https://* ]]; then
+            echo "::error::EXPO_PUBLIC_API_URL must use HTTPS."
+            exit 1
+          fi
+      - name: Validate Expo project
+        env:
+          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
+          EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
+          GOOGLE_IOS_URL_SCHEME: ${{ vars.GOOGLE_IOS_URL_SCHEME }}
+        run: npx expo-doctor
+      - name: Build and submit iOS to TestFlight
+        env:
+          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID }}
+          EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID }}
+          GOOGLE_IOS_URL_SCHEME: ${{ vars.GOOGLE_IOS_URL_SCHEME }}
+        run: eas build --platform ios --profile testflight --auto-submit --non-interactive
