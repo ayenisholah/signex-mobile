@@ -26,6 +26,6 @@ Set `EXPO_PUBLIC_API_URL` to the paper backend URL. No mutation is permitted whi
 
 ## Delivery
 
-Pull requests run checks only. The app is linked to `@ayenisholah/signex-mobile`; successful `main` builds may trigger internal EAS previews after Android/iOS credentials and the GitHub `preview` environment secrets are configured. Production builds, store submissions, and production OTA channels are absent.
+Pull requests run checks only. The app is linked to `@ayenisholah/signex-mobile`; successful `main` builds may trigger an iOS-only EAS TestFlight build and submission after the provider values and protected automation credentials are configured. Android delivery and production OTA channels are outside this slice. Follow [the credential and TestFlight runbook](docs/DEPLOYMENT.md).
 
 No license has been granted yet. Until a license decision is recorded, all rights are reserved.

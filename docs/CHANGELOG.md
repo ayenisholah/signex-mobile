@@ -10,6 +10,7 @@
 - iOS exempt-encryption declaration, EAS Updates project URL, and production brand splash configuration.
 - M1A Google/Apple authentication state machine and screens for bootstrap, pending approval, TOTP/recovery enrollment and challenge, Owner access approval, linked identities, device sessions, logout, and account deletion.
 - Device-only Secure Store refresh credentials, in-memory access-token handling, refresh/revocation cleanup policy, native Apple capability, and Google Sign-In EAS configuration.
+- An iOS-only TestFlight build-and-submit workflow with fail-closed provider configuration validation and a provider credential runbook.
 
 ### Security
 
@@ -24,3 +25,4 @@
 - Linked the iOS submit profile to App Store Connect and delivered the initial branded `0.1.0 (3)` archive for TestFlight processing.
 - Documented the preview environment contract and interactive Android/iOS credential bootstrap boundary.
 - Pinned the additive `@ayenisholah/signex-api-client@0.2.0` package as a verified vendored tarball until GitHub Packages publication completes.
+- Replaced the Android/iOS internal-preview automation with an explicitly gated iOS TestFlight workflow; removed the placeholder Google URL scheme.
