@@ -1,0 +1,41 @@
+name: Update API Client
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Published backend API client version
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  packages: read
+
+jobs:
+  update:
+    if: vars.API_UPDATE_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.CROSS_REPO_TOKEN }}
+      NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://npm.pkg.github.com
+      - name: Pin published API client
+        run: npm install --save-exact "@${GITHUB_REPOSITORY_OWNER,,}/signex-api-client@${{ inputs.version }}"
+      - name: Open dependency update pull request
+        run: |
+          branch="automation/api-client-${{ inputs.version }}-${{ github.run_id }}"
+          git config user.name "signex-api-bot"
+          git config user.email "signex-api-bot@users.noreply.github.com"
+          git switch -c "$branch"
+          git add package.json package-lock.json
+          git commit -m "deps: update Signex API client to ${{ inputs.version }}"
+          git push --set-upstream origin "$branch"
+          gh pr create --base main --head "$branch" --title "deps: update Signex API client to ${{ inputs.version }}" --body "Pins the generated backend contract package and runs the complete mobile compatibility suite."

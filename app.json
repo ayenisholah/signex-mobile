@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Signex",
+    "slug": "signex-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "signex",
+    "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "ios": {
+      "bundleIdentifier": "com.signex.mobile",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.signex.mobile",
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "static",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#07111F"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}

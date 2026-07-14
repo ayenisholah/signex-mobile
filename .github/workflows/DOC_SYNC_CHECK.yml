@@ -1,0 +1,25 @@
+name: Shared Document Drift
+
+on:
+  pull_request:
+    paths:
+      - docs/PRODUCT_SPEC.md
+      - docs/OVERVIEW.md
+      - AGENTS.md
+      - docs/DECISION.md
+      - docs/MILESTONE.md
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    if: vars.DOC_SYNC_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - run: bash scripts/check-shared-docs.sh
