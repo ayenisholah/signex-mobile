@@ -13,9 +13,9 @@ while IFS= read -r file; do
     echo "Markdown basename must be uppercase: $file" >&2
     exit 1
   }
-done < <(find . -type f -name '*.md' -not -path './node_modules/*' -not -path './.git/*')
+done < <(find . -type f -name '*.md' -not -path './node_modules/*' -not -path './.npm-cache/*' -not -path './.git/*')
 
-if grep -R --exclude-dir=node_modules --include='*.md' -n 'NotifyHub' .; then
+if grep -R --exclude-dir=node_modules --exclude-dir=.npm-cache --include='*.md' -n 'NotifyHub' .; then
   echo "NotifyHub is not the product name; use Signex" >&2
   exit 1
 fi
