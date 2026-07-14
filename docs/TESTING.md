@@ -9,3 +9,5 @@
 M1A unit tests cover every server-driven auth transition, pending-user isolation, protected-route admission, revocation cleanup policy, and offline restoration lockout. Native provider cancellation, Secure Store failure/rotation, VoiceOver at 200% text, remote revocation, Apple/Google signup and linking, first-Owner bootstrap, TOTP/recovery, and deletion still require the recorded real-iPhone TestFlight matrix; unit tests are not device evidence or evidence for any trading workflow.
 
 The iOS TestFlight workflow must reject a missing API URL, either missing Google client ID, a non-Google client-ID suffix, a mismatched reversed iOS URL scheme, or a non-HTTPS API URL before invoking EAS. A successful EAS build and App Store Connect upload do not replace provider or backend E2E evidence.
+
+The TestFlight native prebuild must generate modular-header declarations for `GoogleUtilities` and `RecaptchaInterop`; the EAS CocoaPods phase is the authoritative macOS verification because the managed repository does not track generated native projects.

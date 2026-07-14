@@ -7,9 +7,11 @@ function environmentValue(name: string): string | undefined {
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   const googlePlugin = "@react-native-google-signin/google-signin";
-  const plugins = (config.plugins ?? []).filter((plugin) =>
-    (Array.isArray(plugin) ? plugin[0] : plugin) !== googlePlugin,
-  );
+  const buildPropertiesPlugin = "expo-build-properties";
+  const plugins = (config.plugins ?? []).filter((plugin) => {
+    const pluginName = Array.isArray(plugin) ? plugin[0] : plugin;
+    return pluginName !== googlePlugin && pluginName !== buildPropertiesPlugin;
+  });
   const googleIosClientId = environmentValue("EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID");
   const googleWebClientId = environmentValue("EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID");
   const googleIosUrlScheme = environmentValue("GOOGLE_IOS_URL_SCHEME");
@@ -54,6 +56,17 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     },
     plugins: [
       ...plugins,
+      [
+        buildPropertiesPlugin,
+        {
+          ios: {
+            extraPods: [
+              { name: "GoogleUtilities", modular_headers: true },
+              { name: "RecaptchaInterop", modular_headers: true },
+            ],
+          },
+        },
+      ],
       "expo-apple-authentication",
       ...googlePluginConfiguration,
     ],
