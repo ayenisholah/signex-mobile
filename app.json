@@ -2,7 +2,7 @@
   "expo": {
     "name": "Signex",
     "slug": "signex-mobile",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "orientation": "portrait",
     "scheme": "signex",
     "icon": "./assets/brand/icon.png",
@@ -12,6 +12,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.signex.mobile",
+      "usesAppleSignIn": true,
       "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -40,7 +41,9 @@
           "image": "./assets/brand/splash-lockup.png",
           "imageWidth": 280
         }
-      ]
+      ],
+      "expo-secure-store",
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true,

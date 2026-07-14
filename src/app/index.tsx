@@ -1,255 +1,370 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type PropsWithChildren } from "react";
 import {
   ActivityIndicator,
-  Image,
+  Alert,
+  Platform,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   useColorScheme,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import * as AppleAuthentication from "expo-apple-authentication";
+import { GoogleSigninButton } from "@react-native-google-signin/google-signin";
+import type { AccessRequest, LinkedIdentity, Session } from "@ayenisholah/signex-api-client";
 
-import { getBackendHealth, type BackendHealth } from "../api/health";
-import { GlassSurface } from "../components/GlassSurface";
-import { themes, type Theme } from "../theme/tokens";
+import { useAuth } from "@/auth/AuthContext";
+import { GlassSurface } from "@/components/GlassSurface";
+import { themes, type Theme } from "@/theme/tokens";
 
-type LoadState =
-  | { readonly kind: "loading" }
-  | { readonly kind: "ready"; readonly health: BackendHealth }
-  | { readonly kind: "error"; readonly message: string };
-
-const signalLines = [
-  { left: -38, top: 188, width: 218, rotate: "12deg" },
-  { left: 108, top: 262, width: 260, rotate: "-8deg" },
-  { left: 228, top: 158, width: 210, rotate: "-14deg" },
-  { left: -24, top: 552, width: 250, rotate: "-10deg" },
-  { left: 196, top: 640, width: 272, rotate: "9deg" },
-] as const;
-
-export default function StatusScreen() {
-  const colorScheme = useColorScheme();
-  const theme = colorScheme === "light" ? themes.light : themes.dark;
-  const styles = useMemo(() => createStyles(theme), [theme]);
-  const [state, setState] = useState<LoadState>({ kind: "loading" });
-
-  const refresh = useCallback(async () => {
-    try {
-      setState({ kind: "ready", health: await getBackendHealth() });
-    } catch (error) {
-      setState({
-        kind: "error",
-        message: error instanceof Error ? error.message : "Backend health is unavailable",
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    void getBackendHealth().then(
-      (health) => active && setState({ kind: "ready", health }),
-      (error: unknown) =>
-        active &&
-        setState({
-          kind: "error",
-          message: error instanceof Error ? error.message : "Backend health is unavailable",
-        }),
-    );
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  const markSource =
-    colorScheme === "light"
-      ? require("../../assets/brand/mark-light.png")
-      : require("../../assets/brand/mark-dark.png");
-
+function Shell({ children }: PropsWithChildren) {
+  const scheme = useColorScheme();
+  const theme = scheme === "light" ? themes.light : themes.dark;
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <SignalField theme={theme} />
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.brandLockup}>
-            <Image accessibilityIgnoresInvertColors source={markSource} style={styles.brandMark} />
-            <Text accessibilityRole="header" style={styles.brand}>
-              Signex
-            </Text>
-          </View>
-          <GlassSurface fallbackColor={theme.surface} style={styles.environmentBadge}>
-            <View style={styles.signalDot} />
-            <Text style={styles.environmentText}>PAPER</Text>
-          </GlassSurface>
+    <SafeAreaView style={[styles.safe, { backgroundColor: theme.background }]}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <View accessible accessibilityRole="header" style={styles.brandRow}>
+          <View style={[styles.mark, { backgroundColor: theme.accent }]} />
+          <Text maxFontSizeMultiplier={2} style={[styles.brand, { color: theme.textPrimary }]}>Signex</Text>
+          <Text maxFontSizeMultiplier={2} style={[styles.environment, { color: theme.signal }]}>PAPER</Text>
         </View>
-
-        <View style={styles.hero}>
-          <Text style={styles.eyebrow}>SIGNALS INTO EXECUTION</Text>
-          <Text style={styles.title}>Controlled from the backend.</Text>
-          <Text style={styles.description}>
-            This M0 client checks system readiness only. Trading, credentials, and signing never
-            run on this device.
-          </Text>
-        </View>
-
-        <GlassSurface
-          fallbackColor={theme.surfaceElevated}
-          style={styles.statusCard}
-          tintColor={theme.background}
-        >
-          <Text style={styles.cardLabel}>BACKEND STATUS</Text>
-          {state.kind === "loading" ? (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator accessibilityLabel="Checking backend status" color={theme.signal} />
-              <Text style={styles.detailText}>Checking paper environment</Text>
-            </View>
-          ) : null}
-          {state.kind === "ready" ? (
-            <>
-              <View style={styles.statusRow}>
-                <View style={styles.healthyIndicator} />
-                <Text style={styles.readyText}>{state.health.status}</Text>
-              </View>
-              <Text style={styles.detailText}>
-                {state.health.mode} · {state.health.stage}
-              </Text>
-              <View style={styles.divider} />
-              <Text style={styles.blockedText}>Trading entry remains blocked.</Text>
-            </>
-          ) : null}
-          {state.kind === "error" ? (
-            <>
-              <View style={styles.statusRow}>
-                <View style={styles.errorIndicator} />
-                <Text style={styles.errorText}>OFFLINE</Text>
-              </View>
-              <Text style={styles.detailText}>{state.message}</Text>
-              <View style={styles.divider} />
-              <Text style={styles.blockedText}>No commands are available offline.</Text>
-            </>
-          ) : null}
-        </GlassSurface>
-
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => {
-            setState({ kind: "loading" });
-            void refresh();
-          }}
-          style={({ pressed }) => [styles.buttonPressable, pressed && styles.buttonPressed]}
-        >
-          <GlassSurface
-            fallbackColor={theme.surfaceElevated}
-            interactive
-            style={styles.button}
-            tintColor={theme.accent}
-          >
-            <Text style={styles.buttonText}>Check again</Text>
-            <Text accessibilityElementsHidden style={styles.buttonArrow}>
-              →
-            </Text>
-          </GlassSurface>
-        </Pressable>
+        {children}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function SignalField({ theme }: { readonly theme: Theme }) {
+function Card({ children }: PropsWithChildren) {
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark;
   return (
-    <View accessibilityElementsHidden pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {signalLines.map((line, index) => (
-        <View
-          key={`${line.top}-${line.left}`}
-          style={[
-            stylesBase.fieldLine,
-            {
-              backgroundColor: theme.field,
-              left: line.left,
-              top: line.top,
-              transform: [{ rotate: line.rotate }],
-              width: line.width,
-            },
-          ]}
-        >
-          <View
-            style={[
-              stylesBase.fieldNode,
-              { backgroundColor: index % 2 === 0 ? theme.signal : theme.velocity },
-            ]}
-          />
-        </View>
-      ))}
+    <GlassSurface fallbackColor={theme.surfaceElevated} style={[styles.card, { borderColor: theme.border }]}>
+      {children}
+    </GlassSurface>
+  );
+}
+
+function Button({
+  label,
+  onPress,
+  destructive = false,
+  disabled = false,
+}: {
+  readonly label: string;
+  readonly onPress: () => void;
+  readonly destructive?: boolean;
+  readonly disabled?: boolean;
+}) {
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.button,
+        { backgroundColor: destructive ? theme.critical : theme.accent, opacity: disabled ? 0.45 : pressed ? 0.75 : 1 },
+      ]}
+    >
+      <Text maxFontSizeMultiplier={2} style={styles.buttonText}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function Heading({ title, body }: { readonly title: string; readonly body: string }) {
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  return (
+    <View style={styles.headingBlock}>
+      <Text accessibilityRole="header" maxFontSizeMultiplier={2} style={[styles.title, { color: theme.textPrimary }]}>{title}</Text>
+      <Text maxFontSizeMultiplier={2} style={[styles.body, { color: theme.textSecondary }]}>{body}</Text>
     </View>
   );
 }
 
-const stylesBase = StyleSheet.create({
-  fieldLine: { height: 1, opacity: 0.58, position: "absolute" },
-  fieldNode: { borderRadius: 999, height: 5, position: "absolute", right: 0, top: -2, width: 5 },
-});
-
-function createStyles(theme: Theme) {
-  return StyleSheet.create({
-    safeArea: { backgroundColor: theme.background, flex: 1 },
-    container: { flexGrow: 1, gap: 30, paddingHorizontal: 24, paddingVertical: 24 },
-    header: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
-    brandLockup: { alignItems: "center", flexDirection: "row", gap: 10 },
-    brandMark: { height: 36, width: 36 },
-    brand: { color: theme.textPrimary, fontSize: 24, fontWeight: "700", letterSpacing: -0.7 },
-    environmentBadge: {
-      alignItems: "center",
-      borderColor: theme.border,
-      borderCurve: "continuous",
-      borderRadius: 999,
-      borderWidth: 1,
-      flexDirection: "row",
-      gap: 7,
-      overflow: "hidden",
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-    },
-    signalDot: { backgroundColor: theme.signal, borderRadius: 999, height: 6, width: 6 },
-    environmentText: { color: theme.textPrimary, fontSize: 11, fontWeight: "800", letterSpacing: 1.2 },
-    hero: { gap: 12, paddingTop: 18 },
-    eyebrow: { color: theme.signal, fontSize: 12, fontWeight: "800", letterSpacing: 1.8 },
-    title: { color: theme.textPrimary, fontSize: 40, fontWeight: "800", letterSpacing: -1.5, lineHeight: 45 },
-    description: { color: theme.textSecondary, fontSize: 16, lineHeight: 24 },
-    statusCard: {
-      borderColor: theme.border,
-      borderCurve: "continuous",
-      borderRadius: 24,
-      borderWidth: 1,
-      gap: 12,
-      minHeight: 192,
-      overflow: "hidden",
-      padding: 22,
-    },
-    cardLabel: { color: theme.textSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 1.5 },
-    loadingRow: { alignItems: "center", flexDirection: "row", gap: 12, paddingTop: 20 },
-    statusRow: { alignItems: "center", flexDirection: "row", gap: 10 },
-    healthyIndicator: { backgroundColor: theme.signal, borderRadius: 999, height: 10, width: 10 },
-    errorIndicator: { backgroundColor: theme.critical, borderRadius: 999, height: 10, width: 10 },
-    readyText: { color: theme.signal, fontSize: 30, fontWeight: "700" },
-    errorText: { color: theme.critical, fontSize: 28, fontWeight: "800" },
-    detailText: { color: theme.textPrimary, fontSize: 15, lineHeight: 22 },
-    divider: { backgroundColor: theme.border, height: 1, marginVertical: 2 },
-    blockedText: { color: theme.warning, fontSize: 14, fontWeight: "700" },
-    buttonPressable: { borderCurve: "continuous", borderRadius: 18 },
-    buttonPressed: { transform: [{ scale: 0.985 }] },
-    button: {
-      alignItems: "center",
-      borderColor: theme.border,
-      borderCurve: "continuous",
-      borderRadius: 18,
-      borderWidth: 1,
-      flexDirection: "row",
-      justifyContent: "center",
-      minHeight: 56,
-      overflow: "hidden",
-      paddingHorizontal: 22,
-    },
-    buttonText: { color: theme.textPrimary, fontSize: 16, fontWeight: "800" },
-    buttonArrow: { color: theme.accent, fontSize: 22, marginLeft: 10 },
-  });
+function SignIn() {
+  const { signIn } = useAuth();
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  return (
+    <>
+      <Heading title="Your control plane, securely yours" body="Use Apple or Google to request access. Signex never creates a password account and never merges identities by email." />
+      <Card>
+        <View style={styles.providerStack}>
+          {Platform.OS === "ios" ? (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonStyle={theme === themes.dark ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+              cornerRadius={12}
+              onPress={() => void signIn("APPLE")}
+              style={styles.providerButton}
+            />
+          ) : null}
+          {Platform.OS === "ios" ? (
+            <GoogleSigninButton
+              color={GoogleSigninButton.Color.Light}
+              onPress={() => void signIn("GOOGLE")}
+              size={GoogleSigninButton.Size.Wide}
+              style={styles.googleButton}
+            />
+          ) : (
+            <Text maxFontSizeMultiplier={2} style={[styles.caption, { color: theme.textSecondary }]}>This authentication slice is available on iOS only.</Text>
+          )}
+        </View>
+        <Text maxFontSizeMultiplier={2} style={[styles.caption, { color: theme.textSecondary }]}>New accounts stay isolated until an Owner approves Viewer access.</Text>
+      </Card>
+    </>
+  );
 }
+
+function Pending() {
+  const { state, bootstrap, logout, deleteAccount } = useAuth();
+  const [token, setToken] = useState("");
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  if (state.kind !== "PENDING_APPROVAL" && state.kind !== "BOOTSTRAP_REQUIRED") return null;
+  return (
+    <>
+      <Heading title="Access request received" body="Your provider identity is verified, but private Signex data remains locked until an Owner approves this account." />
+      <Card>
+        <Text maxFontSizeMultiplier={2} style={[styles.label, { color: theme.textPrimary }]}>Setting up the first Owner?</Text>
+        <TextInput
+          accessibilityLabel="Deployment bootstrap token"
+          autoCapitalize="none"
+          autoCorrect={false}
+          onChangeText={setToken}
+          placeholder="One-use deployment token"
+          placeholderTextColor={theme.textSecondary}
+          secureTextEntry
+          style={[styles.input, { borderColor: theme.border, color: theme.textPrimary }]}
+          value={token}
+        />
+        <Button disabled={token.length < 32} label="Bootstrap first Owner" onPress={() => void bootstrap(token)} />
+      </Card>
+      <Button label="Sign out" onPress={() => void logout()} />
+      <Button destructive label="Delete request and account" onPress={() => void deleteAccount()} />
+    </>
+  );
+}
+
+function MfaChallenge() {
+  const { verifyMfa } = useAuth();
+  const [code, setCode] = useState("");
+  const [recovery, setRecovery] = useState(false);
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  return (
+    <>
+      <Heading title="Verify it’s you" body={recovery ? "Enter one unused recovery code." : "Enter the current six-digit code from your authenticator."} />
+      <Card>
+        <TextInput
+          accessibilityLabel={recovery ? "Recovery code" : "Authenticator code"}
+          autoComplete="one-time-code"
+          keyboardType={recovery ? "default" : "number-pad"}
+          maxLength={recovery ? 64 : 6}
+          onChangeText={setCode}
+          style={[styles.input, styles.codeInput, { borderColor: theme.border, color: theme.textPrimary }]}
+          value={code}
+        />
+        <Button disabled={code.length < 6} label="Verify" onPress={() => void verifyMfa(code, recovery)} />
+        <Pressable accessibilityRole="button" onPress={() => { setCode(""); setRecovery(!recovery); }} style={styles.textButton}>
+          <Text maxFontSizeMultiplier={2} style={{ color: theme.accent }}>{recovery ? "Use authenticator code" : "Use a recovery code"}</Text>
+        </Pressable>
+      </Card>
+    </>
+  );
+}
+
+function MfaEnrollment() {
+  const { beginMfaEnrollment, confirmMfaEnrollment, acknowledgeRecoveryCodes } = useAuth();
+  const [secret, setSecret] = useState<string>();
+  const [code, setCode] = useState("");
+  const [codes, setCodes] = useState<readonly string[]>();
+  const [error, setError] = useState<string>();
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+
+  useEffect(() => {
+    let active = true;
+    void beginMfaEnrollment().then((value) => { if (active) setSecret(value.secret); }).catch((cause) => {
+      if (active) setError(cause instanceof Error ? cause.message : "Enrollment failed.");
+    });
+    return () => { active = false; };
+  }, [beginMfaEnrollment]);
+
+  const confirm = async () => {
+    try { setCodes(await confirmMfaEnrollment(code)); } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "That code was not accepted.");
+    }
+  };
+
+  return (
+    <>
+      <Heading title="Protect privileged access" body="Owner, Trader, and Approver access requires Signex TOTP in addition to your social identity." />
+      <Card>
+        {error === undefined ? null : <Text accessibilityRole="alert" style={{ color: theme.critical }}>{error}</Text>}
+        {codes === undefined ? (
+          <>
+            <Text selectable maxFontSizeMultiplier={2} style={[styles.secret, { color: theme.textPrimary }]}>{secret ?? "Preparing authenticator secret…"}</Text>
+            <TextInput accessibilityLabel="Authenticator code" keyboardType="number-pad" maxLength={6} onChangeText={setCode} style={[styles.input, styles.codeInput, { borderColor: theme.border, color: theme.textPrimary }]} value={code} />
+            <Button disabled={code.length !== 6 || secret === undefined} label="Confirm authenticator" onPress={() => void confirm()} />
+          </>
+        ) : (
+          <>
+            <Text maxFontSizeMultiplier={2} style={[styles.label, { color: theme.textPrimary }]}>Save these one-use recovery codes now</Text>
+            <Text selectable maxFontSizeMultiplier={2} style={[styles.recoveryCodes, { color: theme.textPrimary }]}>{codes.join("\n")}</Text>
+            <Button label="I saved every code" onPress={() => void acknowledgeRecoveryCodes(codes)} />
+          </>
+        )}
+      </Card>
+    </>
+  );
+}
+
+function SecurityCenter() {
+  const { state, controller, logout, deleteAccount } = useAuth();
+  const [sessions, setSessions] = useState<readonly Session[]>([]);
+  const [identities, setIdentities] = useState<readonly LinkedIdentity[]>([]);
+  const [requests, setRequests] = useState<readonly AccessRequest[]>([]);
+  const [linkTotp, setLinkTotp] = useState("");
+  const [error, setError] = useState<string>();
+  const theme: Theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  const user = state.kind === "AUTHENTICATED" ? state.user : null;
+  const owner = user?.roles.includes("OWNER") ?? false;
+
+  const refresh = useMemo(() => async () => {
+    const [nextSessions, nextIdentities] = await Promise.all([
+      controller.client.listSessions(),
+      controller.client.listIdentities(),
+    ]);
+    setSessions(nextSessions);
+    setIdentities(nextIdentities);
+    if (owner) setRequests(await controller.client.listAccessRequests());
+  }, [controller, owner]);
+
+  useEffect(() => {
+    queueMicrotask(() => void refresh().catch(() => undefined));
+  }, [refresh]);
+  if (user === null) return null;
+
+  const run = async (action: () => Promise<unknown>) => {
+    try {
+      setError(undefined);
+      await action();
+      await refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "The security action failed.");
+    }
+  };
+
+  return (
+    <>
+      <Heading title={`Welcome${user.display_name === null ? "" : `, ${user.display_name}`}`} body="Authentication is active. Access tokens stay in memory; only the rotating refresh credential is stored in the device keychain." />
+      <Card>
+        <Text accessibilityRole="header" maxFontSizeMultiplier={2} style={[styles.sectionTitle, { color: theme.textPrimary }]}>Linked providers</Text>
+        {error === undefined ? null : <Text accessibilityRole="alert" style={{ color: theme.critical }}>{error}</Text>}
+        {identities.map((identity) => (
+          <View key={identity.provider} style={styles.row}>
+            <Text maxFontSizeMultiplier={2} style={{ color: theme.textPrimary }}>{identity.provider === "APPLE" ? "Apple" : "Google"}</Text>
+            <Text maxFontSizeMultiplier={2} style={{ color: theme.textSecondary }}>{identity.profile_email ?? "Private profile"}</Text>
+            {identities.length < 2 ? null : <Button label="Unlink" onPress={() => void run(() => controller.client.unlinkIdentity(identity.provider))} />}
+          </View>
+        ))}
+        {!user.roles.some((role) => role === "OWNER" || role === "TRADER" || role === "APPROVER") ? null : (
+          <TextInput
+            accessibilityLabel="Authenticator code for provider linking"
+            keyboardType="number-pad"
+            maxLength={6}
+            onChangeText={setLinkTotp}
+            placeholder="TOTP required to link"
+            placeholderTextColor={theme.textSecondary}
+            style={[styles.input, { borderColor: theme.border, color: theme.textPrimary }]}
+            value={linkTotp}
+          />
+        )}
+        {(["APPLE", "GOOGLE"] as const).filter((provider) => !identities.some((identity) => identity.provider === provider)).map((provider) => (
+          <Button
+            key={provider}
+            disabled={user.roles.some((role) => role === "OWNER" || role === "TRADER" || role === "APPROVER") && linkTotp.length !== 6}
+            label={`Link ${provider === "APPLE" ? "Apple" : "Google"}`}
+            onPress={() => void run(() => controller.linkIdentity(provider, linkTotp || undefined))}
+          />
+        ))}
+      </Card>
+      <Card>
+        <Text accessibilityRole="header" maxFontSizeMultiplier={2} style={[styles.sectionTitle, { color: theme.textPrimary }]}>Devices and sessions</Text>
+        {sessions.map((session) => (
+          <View key={session.id} style={styles.row}>
+            <View>
+              <Text maxFontSizeMultiplier={2} style={{ color: theme.textPrimary }}>{session.device_name}</Text>
+              <Text maxFontSizeMultiplier={2} style={{ color: theme.textSecondary }}>{session.current ? "This device" : `Last used ${session.last_seen_at}`}</Text>
+            </View>
+            {session.current ? null : <Button label="Revoke" onPress={() => void run(() => controller.client.revokeSession(session.id))} />}
+          </View>
+        ))}
+      </Card>
+      {!owner ? null : (
+        <Card>
+          <Text accessibilityRole="header" maxFontSizeMultiplier={2} style={[styles.sectionTitle, { color: theme.textPrimary }]}>Pending access</Text>
+          {requests.length === 0 ? <Text style={{ color: theme.textSecondary }}>No pending requests.</Text> : requests.map((request) => (
+            <View key={request.user_id} style={styles.row}>
+              <Text maxFontSizeMultiplier={2} style={{ color: theme.textPrimary }}>{request.display_name ?? request.email ?? request.provider}</Text>
+              <Button label="Approve Viewer" onPress={() => void run(() => controller.client.approveAccessRequest(request.user_id))} />
+            </View>
+          ))}
+        </Card>
+      )}
+      <Button label="Sign out" onPress={() => void logout()} />
+      <Button destructive label="Delete account" onPress={() => Alert.alert(
+        "Delete Signex account?",
+        "This revokes sessions and provider credentials and erases profile data. The final Owner must transfer ownership first.",
+        [{ text: "Cancel", style: "cancel" }, { text: "Delete", style: "destructive", onPress: () => void deleteAccount() }],
+      )} />
+    </>
+  );
+}
+
+export default function Index() {
+  const { state, retry } = useAuth();
+  return (
+    <Shell>
+      {state.kind === "RESTORING" || state.kind === "AUTHORIZING" ? <ActivityIndicator accessibilityLabel="Authenticating" size="large" /> : null}
+      {state.kind === "SIGNED_OUT" ? <SignIn /> : null}
+      {state.kind === "PENDING_APPROVAL" || state.kind === "BOOTSTRAP_REQUIRED" ? <Pending /> : null}
+      {state.kind === "MFA_REQUIRED" ? <MfaChallenge /> : null}
+      {state.kind === "MFA_ENROLLMENT_REQUIRED" ? <MfaEnrollment /> : null}
+      {state.kind === "AUTHENTICATED" ? <SecurityCenter /> : null}
+      {state.kind === "OFFLINE_LOCKED" || state.kind === "ERROR" ? (
+        <>
+          <Heading title="Signex is locked" body={state.message} />
+          <Button label="Try again" onPress={() => void retry()} />
+        </>
+      ) : null}
+    </Shell>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1 },
+  scroll: { flexGrow: 1, gap: 20, paddingHorizontal: 20, paddingBottom: 40 },
+  brandRow: { alignItems: "center", flexDirection: "row", gap: 10, paddingTop: 14 },
+  mark: { borderRadius: 5, height: 20, transform: [{ skewX: "-12deg" }], width: 8 },
+  brand: { fontSize: 22, fontWeight: "800", letterSpacing: -0.5 },
+  environment: { fontSize: 12, fontWeight: "800", marginLeft: "auto" },
+  headingBlock: { gap: 10, marginTop: 26 },
+  title: { fontSize: 34, fontWeight: "800", letterSpacing: -1.1, lineHeight: 40 },
+  body: { fontSize: 17, lineHeight: 25 },
+  card: { borderRadius: 24, borderWidth: 1, gap: 16, overflow: "hidden", padding: 20 },
+  providerStack: { alignItems: "center", gap: 12 },
+  providerButton: { height: 52, width: "100%" },
+  googleButton: { height: 52, width: "100%" },
+  caption: { fontSize: 14, lineHeight: 21, textAlign: "center" },
+  button: { alignItems: "center", borderRadius: 14, justifyContent: "center", minHeight: 52, minWidth: 96, paddingHorizontal: 18, paddingVertical: 12 },
+  buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700", textAlign: "center" },
+  textButton: { alignItems: "center", justifyContent: "center", minHeight: 48 },
+  input: { borderRadius: 14, borderWidth: 1, fontSize: 17, minHeight: 52, paddingHorizontal: 16 },
+  codeInput: { fontSize: 26, fontVariant: ["tabular-nums"], letterSpacing: 6, textAlign: "center" },
+  label: { fontSize: 17, fontWeight: "700" },
+  secret: { fontFamily: Platform.select({ ios: "Menlo", default: "monospace" }), fontSize: 16, lineHeight: 24 },
+  recoveryCodes: { fontFamily: Platform.select({ ios: "Menlo", default: "monospace" }), fontSize: 18, lineHeight: 28 },
+  sectionTitle: { fontSize: 20, fontWeight: "800" },
+  row: { alignItems: "center", flexDirection: "row", gap: 12, justifyContent: "space-between", minHeight: 52 },
+});

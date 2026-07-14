@@ -2,37 +2,35 @@
 
 ## Snapshot
 
-- Milestone: M0 — Governance and scaffolding
+- Milestone: M1A — Google/Apple authentication and secure sessions
 - Overall state: In progress
 - Last verified: 2026-07-14
 
 ## Completed
 
 - Expo SDK 57 official template adopted as the native compatibility baseline.
-- Documentation hierarchy and strict tracking policy established.
-- Paper-backend status screen and narrow health-contract tests added.
-- CI, opt-in EAS preview, API update, and documentation drift workflows added.
-- Public GitHub repository, required checks, branch protection, preview environment, and disabled-by-default automation switches configured.
-- Mobile CI verified green across documentation, lint, strict types, tests, audit threshold, and all Expo diagnostics.
-- Convergent S branding, production icon/splash sources, semantic light/dark tokens, and accessible Liquid Glass surfaces implemented for the M0 status shell.
-- iOS App Store build `0.1.0 (3)` completed and was accepted by EAS Submit for TestFlight processing; App Store Connect app `6790819875` and the `Team (Expo)` tester group are configured.
-- Personal EAS project `@ayenisholah/signex-mobile` initialized with its public project linkage recorded in app configuration.
-- Paper API URL configured consistently in the Expo and GitHub `preview` environments; paper readiness verified against the deployed backend.
-- Cross-repository automation token configured and documentation/API update switches enabled.
-- GitHub Packages authentication prepared for GitHub-hosted and remote EAS package installs without placing tokens in tracked files or the app bundle.
-- An iPhone is registered with the personal Apple Developer team for internal distribution.
+- Documentation hierarchy, CI, branch protection, API update, and shared-document drift workflows established.
+- Convergent S branding, production assets, semantic light/dark tokens, and accessible Liquid Glass surfaces implemented.
+- Personal EAS project `@ayenisholah/signex-mobile`, paper API environment, GitHub Packages authentication path, iOS registration, and update URL configured.
+- iOS App Store build `0.1.0 (3)` accepted by EAS Submit for TestFlight processing; App Store Connect app `6790819875` and the `Team (Expo)` tester group are configured.
+- Consumes the verified `@ayenisholah/signex-api-client@0.2.0` tarball exactly while GitHub Packages publication is pending.
+- Added Apple/Google native entry points, a fail-closed authentication state machine, first-Owner bootstrap, pending isolation, privileged TOTP/recovery enrollment, Secure Store refresh rotation, Owner access approval, identity linking/unlinking, session revocation, logout, and deletion UI.
+- Enabled the Sign in with Apple capability for `com.signex.mobile` and EAS-supplied Google iOS/Web OAuth configuration.
 
 ## Not completed
 
-- No authentication, scanner, strategy, execution, position, portfolio, approval, analytics, alert, audit, or settings flow exists.
-- The versioned backend client package is not yet published or consumed.
-- No real-device, accessibility, or security certification evidence exists.
+- The backend provider-verification and session HTTP runtime is not implemented, so device flows cannot complete against staging yet.
+- Scanner, strategy, execution, position, portfolio, analytics, alert, audit, and comprehensive settings/role administration do not exist.
+- The versioned backend client package is consumed from a checked-in deterministic tarball but is not yet published to GitHub Packages.
+- No M1A real-device, accessibility, or security certification evidence exists.
 
 ## Blockers
 
-- Expo SDK 57 currently resolves 11 moderate upstream advisories with no non-breaking fix; there are no high or critical advisories, and production distribution remains disabled.
-- Non-interactive preview automation remains disabled until the GitHub `EXPO_TOKEN` and Expo `NODE_AUTH_TOKEN` environment paths are verified end to end.
+- Expo SDK 57 and native-auth dependencies resolve 12 moderate upstream advisories with no accepted non-breaking fix; there are no known high or critical advisories in the verified audit.
+- Non-interactive preview delivery awaits end-to-end verification of `EXPO_TOKEN` and Expo `NODE_AUTH_TOKEN`.
+- Google authentication builds require `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, and `GOOGLE_IOS_URL_SCHEME` plus matching Google console configuration.
+- Client publication awaits the backend versioned release workflow; the next authentication TestFlight archive awaits the backend runtime and configured provider values.
 
 ## Next verified task
 
-Keep M0 CI green, verify non-interactive EAS preview delivery, publish and pin the backend client package, monitor upstream advisory fixes, and begin the shared authentication foundation under M1.
+Complete the backend authentication runtime, publish client `0.2.0`, configure provider values, verify non-interactive preview delivery, then execute the real-iPhone social/MFA/session TestFlight matrix.
