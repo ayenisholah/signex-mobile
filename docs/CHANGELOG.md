@@ -26,3 +26,4 @@
 - Documented the preview environment contract and interactive Android/iOS credential bootstrap boundary.
 - Pinned the additive `@ayenisholah/signex-api-client@0.2.0` package as a verified vendored tarball until GitHub Packages publication completes.
 - Replaced the Android/iOS internal-preview automation with an explicitly gated iOS TestFlight workflow; removed the placeholder Google URL scheme.
+- Added Expo's build-properties plugin to generate modular headers for the Google Sign-In transitive iOS pods required by CocoaPods static linking.

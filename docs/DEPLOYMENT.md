@@ -127,6 +127,8 @@ gh workflow run IOS_TESTFLIGHT.yml --repo ayenisholah/signex-mobile --ref main
 
 The workflow runs `eas build --platform ios --profile testflight --auto-submit --non-interactive`. It does not request an Android build. Keep `EAS_TESTFLIGHT_ENABLED=false` to stop automatic delivery while credentials are rotated or the backend is unavailable.
 
+The generated iOS Podfile marks `GoogleUtilities` and `RecaptchaInterop` as modular-header pods through `expo-build-properties`. This is required because Google Sign-In's Swift `AppCheckCore` pod depends on those Objective-C pods while the managed iOS target links CocoaPods statically. Removing that configuration causes `pod install` to fail before compilation.
+
 ## Backend readiness boundary
 
 The Google and Apple verification adapters, token exchange, session handlers, and staging authentication endpoints are not implemented yet. The mobile archive can build and reach TestFlight after provider configuration, but end-to-end social authentication cannot pass until the backend runtime stores its provider secrets and exposes the documented authentication API. A successful archive is delivery evidence only, not M1A authentication certification.

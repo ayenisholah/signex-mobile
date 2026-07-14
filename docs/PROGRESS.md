@@ -17,6 +17,7 @@
 - Added Apple/Google native entry points, a fail-closed authentication state machine, first-Owner bootstrap, pending isolation, privileged TOTP/recovery enrollment, Secure Store refresh rotation, Owner access approval, identity linking/unlinking, session revocation, logout, and deletion UI.
 - Declared the Sign in with Apple capability for `com.signex.mobile` and the EAS contract for Google iOS/Web OAuth configuration.
 - Replaced the cross-platform preview workflow with a gated iOS-only TestFlight build-and-submit workflow that rejects missing or inconsistent Google configuration.
+- Configured modular headers for the Google Sign-In iOS dependency chain after the first `0.2.0 (4)` EAS attempt failed during CocoaPods installation; replacement archive verification is pending.
 
 ## Not completed
 
