@@ -8,6 +8,18 @@
       "channel": "staging",
       "distribution": "internal",
       "environment": "preview"
+    },
+    "testflight": {
+      "autoIncrement": true,
+      "distribution": "store",
+      "environment": "preview"
+    }
+  },
+  "submit": {
+    "testflight": {
+      "ios": {
+        "ascAppId": "6790819875"
+      }
     }
   }
 }

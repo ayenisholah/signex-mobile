@@ -28,14 +28,16 @@ jobs:
           node-version: 24
           registry-url: https://npm.pkg.github.com
       - name: Pin published API client
-        run: npm install --save-exact "@${GITHUB_REPOSITORY_OWNER,,}/signex-api-client@${{ inputs.version }}"
+        run: |
+          npm install --save-exact "@${GITHUB_REPOSITORY_OWNER,,}/signex-api-client@${{ inputs.version }}"
+          node scripts/record-api-client-update.mjs "${{ inputs.version }}"
       - name: Open dependency update pull request
         run: |
           branch="automation/api-client-${{ inputs.version }}-${{ github.run_id }}"
           git config user.name "signex-api-bot"
           git config user.email "signex-api-bot@users.noreply.github.com"
           git switch -c "$branch"
-          git add package.json package-lock.json
+          git add package.json package-lock.json docs/CHANGELOG.md
           git commit -m "deps: update Signex API client to ${{ inputs.version }}"
           git push --set-upstream origin "$branch"
           gh pr create --base main --head "$branch" --title "deps: update Signex API client to ${{ inputs.version }}" --body "Pins the generated backend contract package and runs the complete mobile compatibility suite."

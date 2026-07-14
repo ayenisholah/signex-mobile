@@ -14,6 +14,8 @@
 - CI, opt-in EAS preview, API update, and documentation drift workflows added.
 - Public GitHub repository, required checks, branch protection, preview environment, and disabled-by-default automation switches configured.
 - Mobile CI verified green across documentation, lint, strict types, tests, audit threshold, and all Expo diagnostics.
+- Convergent S branding, production icon/splash sources, semantic light/dark tokens, and accessible Liquid Glass surfaces implemented for the M0 status shell.
+- iOS App Store build `0.1.0 (3)` completed and was accepted by EAS Submit for TestFlight processing; App Store Connect app `6790819875` and the `Team (Expo)` tester group are configured.
 
 ## Not completed
 

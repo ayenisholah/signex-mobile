@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400">
+  <g transform="translate(42 -14) scale(.42)" fill="none" stroke-linecap="round" stroke-linejoin="miter" stroke-width="76">
+    <path d="M782 212H430L246 396l218 170" stroke="#F8FAFC" />
+    <path d="M182 776h170l112-210" stroke="#5EEAD4" />
+    <path d="M464 566l170 174h166" stroke="#C4B5FD" />
+  </g>
+  <g transform="translate(42 -14) scale(.42)" fill="#080D18" stroke="#F8FAFC" stroke-width="42">
+    <circle cx="782" cy="212" r="54" /><circle cx="182" cy="776" r="54" /><circle cx="464" cy="566" r="70" />
+  </g>
+  <text x="430" y="220" fill="#F8FAFC" font-family="Segoe UI, Arial, sans-serif" font-size="136" font-weight="650" letter-spacing="-5">Signex</text>
+  <text x="438" y="292" fill="#B6C2D2" font-family="Segoe UI, Arial, sans-serif" font-size="34" letter-spacing="2">SIGNALS INTO EXECUTION</text>
+</svg>
