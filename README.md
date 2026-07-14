@@ -26,6 +26,6 @@ Set `EXPO_PUBLIC_API_URL` to the paper backend URL. No mutation is permitted whi
 
 ## Delivery
 
-Pull requests run checks only. Successful `main` builds may trigger internal EAS preview builds after the Expo project has been initialized and the GitHub `preview` environment is enabled. Production builds, store submissions, and production OTA channels are absent.
+Pull requests run checks only. The app is linked to `@ayenisholah/signex-mobile`; successful `main` builds may trigger internal EAS previews after Android/iOS credentials and the GitHub `preview` environment secrets are configured. Production builds, store submissions, and production OTA channels are absent.
 
 No license has been granted yet. Until a license decision is recorded, all rights are reserved.
