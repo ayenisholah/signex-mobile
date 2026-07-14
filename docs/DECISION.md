@@ -41,3 +41,11 @@ Accepted entries are append-only. Supersede an earlier decision with a new ID in
 - Scope: Shared
 - Decision: Every ordinary pull request updates `CHANGELOG.md`. Other control documents are updated whenever their represented facts change.
 - Consequences: Documentation drift is a merge failure, not deferred cleanup.
+
+## DEC-0006 — Solo-maintainer branch-protection bypass
+
+- Status: Accepted
+- Date: 2026-07-14
+- Scope: Shared
+- Decision: Required checks, pull requests, code-owner review, and linear history apply normally, but administrator enforcement remains disabled while the repository has only one trusted maintainer. Enable administrator enforcement when an independent reviewer is available.
+- Consequences: The owner can perform an auditable emergency or bootstrap push; routine work still uses pull requests. Admin bypass must not be used to conceal a failing check.

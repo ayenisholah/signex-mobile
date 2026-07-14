@@ -9,7 +9,7 @@ gh api --method PUT "repos/$repo/branches/main/protection" --input - <<JSON
     "strict": true,
     "contexts": ["documentation", "mobile"]
   },
-  "enforce_admins": true,
+  "enforce_admins": false,
   "required_pull_request_reviews": {
     "dismiss_stale_reviews": true,
     "require_code_owner_reviews": true,

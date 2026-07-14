@@ -9,3 +9,7 @@
 ### Security
 
 - The scaffold contains no exchange credentials or trading mutations and labels backend entry readiness as blocked.
+
+### Changed
+
+- Moved project-control documentation under `docs/` and recorded the temporary solo-maintainer administrator bypass policy.

@@ -12,6 +12,8 @@
 - Documentation hierarchy and strict tracking policy established.
 - Paper-backend status screen and narrow health-contract tests added.
 - CI, opt-in EAS preview, API update, and documentation drift workflows added.
+- Public GitHub repository, required checks, branch protection, preview environment, and disabled-by-default automation switches configured.
+- Mobile CI verified green across documentation, lint, strict types, tests, audit threshold, and all Expo diagnostics.
 
 ## Not completed
 
@@ -22,8 +24,8 @@
 ## Blockers
 
 - Expo SDK 57 currently resolves 11 moderate upstream advisories with no non-breaking fix; there are no high or critical advisories, and production distribution remains disabled.
-- GitHub CLI authentication is required before branch protection, Actions permissions, environments, variables, and secrets can be configured.
 - EAS project initialization, `EXPO_TOKEN`, and preview environment variables are required before builds are enabled.
+- A least-privilege cross-repository token is required before documentation and API-update automation can be enabled.
 
 ## Next verified task
 
