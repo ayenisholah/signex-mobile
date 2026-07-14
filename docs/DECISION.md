@@ -49,3 +49,11 @@ Accepted entries are append-only. Supersede an earlier decision with a new ID in
 - Scope: Shared
 - Decision: Required checks, pull requests, code-owner review, and linear history apply normally, but administrator enforcement remains disabled while the repository has only one trusted maintainer. Enable administrator enforcement when an independent reviewer is available.
 - Consequences: The owner can perform an auditable emergency or bootstrap push; routine work still uses pull requests. Admin bypass must not be used to conceal a failing check.
+
+## DEC-0007 — Google and Apple identity with Signex-authoritative sessions
+
+- Status: Accepted
+- Date: 2026-07-14
+- Scope: Shared
+- Decision: Replace password, magic-link, phone, and guest authentication with native Google and Apple identity. Provider subjects are keyed by `(provider, provider_subject)` and are never matched or merged by email. Signex remains authoritative for pending approval, users, roles, mandatory privileged-role TOTP, recovery codes, devices, rotating sessions, step-up proofs, revocation, and deletion. Access tokens are 15-minute Ed25519 JWTs held in memory; device-bound opaque refresh tokens rotate once and are stored hashed server-side and in mobile Secure Store. The first socially authenticated user consumes a one-use deployment bootstrap token to become Owner.
+- Consequences: Open registration creates an isolated `PENDING` account; approval initially grants Viewer. Apple and Google codes/tokens require server-side issuer, audience, signature, expiry, state, nonce, subject, and replay checks. Explicit linking requires fresh authentication (plus TOTP for privileged users), the final provider and final Owner are protected, and deletion erases PII/provider credentials while immutable evidence retains only a non-identifying audit pseudonym. Biometrics and Android authentication are deferred.

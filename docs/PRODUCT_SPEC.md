@@ -586,7 +586,7 @@ backend/
     funding-arb-execution/    # Plans, paired orders, recovery, reconciliation
     funding-arb-reconciliation/ # Independent venue and ledger comparisons
     funding-arb-storage/      # SQLx repositories, migrations, outbox, Redis helpers
-    funding-arb-auth/         # Passwords, TOTP, sessions, RBAC, step-up challenges
+    funding-arb-auth/         # Social identity, TOTP, sessions, RBAC, step-up challenges
     funding-arb-api/          # Axum routes, OpenAPI, mobile event gateway
     funding-arb-notify/       # Push, Telegram, Discord adapters
     funding-arb-observability/ # tracing, metrics, health conventions
@@ -792,7 +792,8 @@ These requirements supplement, not replace, the current official venue documenta
 | Table | Important fields / purpose |
 |---|---|
 | `organizations` | Single deployment identity, base currency, live-arm state, hard-limit version |
-| `users`, `roles`, `user_roles` | Identity, status, password hash, permissions |
+| `users`, `roles`, `user_roles` | Signex identity, `PENDING`/active/deleted status, permissions and version; no password credential |
+| `provider_identities`, `social_challenges`, `bootstrap_state` | Google/Apple immutable subjects, one-use state/nonce/PKCE challenges and first-Owner bootstrap |
 | `mfa_methods`, `recovery_codes` | Encrypted TOTP seed, hashed one-use codes |
 | `sessions`, `devices` | Rotating refresh-token families, revocation, device/app metadata |
 | `venue_accounts` | Venue, alias, environment, account/subaccount/wallet identity, capability and certification state |
@@ -857,7 +858,7 @@ Venue ledger values are authoritative for settled cashflows. Derived PnL is repr
 - Mutations require `Idempotency-Key`; resource edits also send `If-Match` with the current version.
 - List endpoints use cursor pagination and stable sort keys.
 - OpenAPI is generated from Rust types and used to generate the mobile client.
-- Never include exchange secrets, private keys, password hashes, TOTP seeds, or refresh tokens in ordinary resource responses.
+- Never include exchange secrets, private keys, provider credentials, TOTP seeds, or refresh tokens in ordinary resource responses.
 
 Success envelope:
 
@@ -893,15 +894,28 @@ Error `details` must be redacted and safe for the caller's role.
 
 | Method/path | Purpose |
 |---|---|
-| `POST /auth/bootstrap` | Consume one-time deployment bootstrap token and create first Owner |
-| `POST /auth/login` | Password stage; returns MFA challenge when required |
-| `POST /auth/mfa/verify` | Complete TOTP/recovery challenge and create session |
-| `POST /auth/refresh` | Rotate refresh token family and issue short-lived access token |
-| `POST /auth/step-up` | Issue a short-lived proof for a named sensitive action |
-| `POST /auth/logout` | Revoke current session |
-| `GET /auth/sessions` / `DELETE /auth/sessions/{id}` | List/revoke devices and sessions |
-| `POST /auth/mfa/enroll` / `POST /auth/mfa/confirm` | Enroll and confirm TOTP |
-| `GET/POST/PATCH /users...` | Role-protected user/invite lifecycle |
+| `POST /api/v1/auth/social/challenges` | Create a short-lived, one-use provider state/nonce/PKCE challenge |
+| `POST /api/v1/auth/social/exchange` | Verify Apple/Google server-side and return one explicit next state |
+| `POST /api/v1/auth/bootstrap` | Socially authenticated first user consumes the one-use deployment token |
+| `POST /api/v1/auth/mfa/enroll` / `POST /api/v1/auth/mfa/confirm` | Enroll TOTP and acknowledge one-use recovery codes |
+| `POST /api/v1/auth/mfa/verify` | Complete TOTP/recovery challenge and create a session |
+| `POST /api/v1/auth/mfa/recovery-codes/acknowledge` | Bind acknowledgement of the new recovery-code set before privileged activation |
+| `POST /api/v1/auth/refresh` | Rotate a refresh token once and issue a 15-minute access token |
+| `POST /api/v1/auth/step-up` | Issue a five-minute proof bound to a named sensitive action |
+| `POST /api/v1/auth/logout` / `GET /api/v1/auth/me` | Revoke current session / read minimal caller status |
+| `GET /api/v1/auth/sessions` / `DELETE /api/v1/auth/sessions/{id}` | List/revoke devices and sessions |
+| `GET/POST/DELETE /api/v1/auth/identities...` | Explicitly list, link, and unlink social identities |
+| `GET /api/v1/access-requests` / `POST /api/v1/access-requests/{id}/approve` | Owner pending-account review and Viewer approval |
+| `DELETE /api/v1/account` | Revoke credentials/sessions, erase PII, and pseudonymize retained audit references |
+| `POST /api/v1/auth/apple/notifications` | Verify and process Apple account-change notifications idempotently |
+
+Signex supports Google and Apple identity only. It has no password, magic-link, phone, or guest authentication. New social identities create isolated `PENDING` users that can access only their status, logout, provider-linking, and deletion flows. Approval grants Viewer; Owner, Trader, and Approver roles remain inactive until TOTP confirmation and recovery-code acknowledgement. Authentication exchange returns exactly one of `PENDING_APPROVAL`, `MFA_REQUIRED`, `MFA_ENROLLMENT_REQUIRED`, or `AUTHENTICATED`.
+
+Recovery codes are returned once. Acknowledgement binds the lowercase SHA-256 digest of the UTF-8 compact JSON code array in its issued order to the enrollment challenge; the server compares it to its own code-set digest before activating a privileged role.
+
+Provider identity is the unique `(provider, provider_subject)` pair. Email, including Apple private relay, and display name are mutable profile attributes and never trigger account merging. Linking a second provider requires a new one-use challenge and fresh provider proof; privileged users also supply TOTP. The final linked provider cannot be removed.
+
+Apple authorization codes and ID tokens are verified server-side for signature, issuer, audience, expiry, state, nonce, immutable subject, and replay. Google server authorization codes and ID tokens receive the equivalent checks and use `sub`, never email, as identity. Provider credentials are encrypted at rest, never returned, and revoked on unlink/deletion where the provider supports revocation.
 
 Access tokens are Ed25519-signed JWTs with deployment-specific issuer/audience, `sub`, `jti`, session ID, roles/permission version, `iat`, `nbf`, `exp` and `kid`; they expire after 15 minutes and remain in app memory. Publish only public verification keys internally and support current/previous keys during audited rotation. Mutations also verify the session is active and its permission version is current, allowing immediate revocation. Refresh tokens are rotating, one-use, device-bound opaque 256-bit values stored hashed server-side and in mobile Secure Store. Reuse revokes the token family and raises a security alert.
 
@@ -1080,8 +1094,9 @@ Server-side authorization is authoritative. Route guards also enforce login, onb
 
 #### Sign in
 
-- Email/username, password-manager-friendly password field, deployment identity, and generic failure messages.
-- Apply server-side rate limiting without revealing account existence.
+- Show native **Continue with Apple** and **Continue with Google** on iOS using provider branding rules; there is no password, magic-link, phone, or guest option.
+- Create a server challenge before native authorization and exchange provider code/token only with the backend. Cancellation remains on sign-in without an error alarm.
+- Apply server-side rate limiting and generic verification failures without revealing account existence.
 
 #### MFA challenge and recovery
 
@@ -1091,13 +1106,13 @@ Server-side authorization is authoritative. Route guards also enforce login, onb
 #### Biometric device lock
 
 - Face ID, Touch ID, or Android biometric unlock releases the locally held refresh credential.
-- Password/MFA fallback, inactivity timeout, app-background privacy shield, and immediate remote-revocation handling.
+- Social reauthentication/MFA fallback, inactivity timeout, app-background privacy shield, and immediate remote-revocation handling.
 - Biometrics never satisfy a backend step-up challenge by themselves.
 
 #### First-run onboarding
 
-1. Welcome, deployment identity, and assigned role.
-2. Mandatory TOTP enrollment and recovery-code confirmation.
+1. Welcome, deployment identity, pending-approval state, or one-use first-Owner bootstrap token.
+2. Mandatory TOTP enrollment and recovery-code acknowledgement for Owner, Trader, and Approver.
 3. Optional biometrics and push enrollment.
 4. Owner-only venue connection wizard.
 5. Risk-profile review and paper-mode configuration.
@@ -1105,10 +1120,12 @@ Server-side authorization is authoritative. Route guards also enforce login, onb
 7. Trading, liquidation, venue, smart-contract, stablecoin, and custody risk acknowledgement.
 8. Readiness checklist. Live mode remains locked until backend certification passes; activation requires Owner step-up and typed `ENABLE LIVE` confirmation.
 
-#### Invite acceptance
+#### Access approval and identity management
 
-- Show deployment, inviter, assigned roles, expiry, password creation, and mandatory MFA enrollment.
-- Expired, revoked, or already consumed invites fail closed.
+- Open registration remains `PENDING` until an Owner approves it; pending accounts cannot access portfolio, position, analytics, alert, audit, or system-health data.
+- Owner approval initially grants Viewer. Invitations and comprehensive role administration are deferred to a later M1 slice.
+- Settings list Apple/Google identities, support explicit fresh-auth linking, and prohibit unlinking the final provider.
+- Session settings list device name and last use, support remote revocation, logout, and in-app deletion. The final Owner must transfer ownership before deletion.
 
 ### 11.4 Home
 
@@ -1285,7 +1302,7 @@ The backend rejects CEX credentials with withdrawal capability where that can be
 ### 11.16 Mobile security
 
 - Access token lives in memory; rotating refresh token lives in Secure Store.
-- Logout, password/MFA change, recovery, device revocation or token reuse invalidates server sessions and clears caches.
+- Logout, MFA change, recovery, account deletion, device revocation, provider revocation, or refresh-token reuse invalidates server sessions and clears credentials/caches.
 - Apply Android secure-window protection on secret/approval views and an iOS app-switcher privacy shield.
 - Use TLS 1.2+ with SHA-256 SPKI pinning. Routine certificate renewal retains the pinned public key. Before key rotation, ship/force a native store build containing the new SPKI as backup, confirm adoption, rotate the server key, then later retire the old pin; keep an emergency store-build recovery runbook.
 - Use signed OTA updates with separate staging/production channels, staged rollout, rollback and a server-enforced minimum version.
@@ -1449,8 +1466,8 @@ External capital movement is never signed by this trading signer. It uses the Ow
 ### 14.5 Application and transport security
 
 - TLS 1.2+ with modern ciphers and HSTS. Automated certificate renewal retains the gateway key/SPKI; any key replacement follows the two-pin native mobile release sequence in section 11.16.
-- Argon2id password hashing with deployment-tuned memory/time cost and breached-password checks without leaking the password.
-- Mandatory TOTP MFA for privileged roles; one-use hashed recovery codes; rotating refresh tokens; session/device revocation.
+- Password credentials are prohibited. Google and Apple proof verification fails closed on signature, issuer, audience, expiry, state, nonce, subject, code-replay, or provider-key-refresh failure.
+- Mandatory TOTP MFA for Owner, Trader, and Approver; replay-resistant timestep tracking, lockout, one-use hashed recovery codes, rotating device-bound refresh tokens, and session/device revocation.
 - RBAC enforced in domain command handlers, not only HTTP middleware.
 - CSRF is not applicable to bearer-only mobile APIs, but any future cookie/web console must add origin and CSRF protections.
 - Strict request size, schema, rate and concurrency limits; generic authentication errors; lockout/risk alerts for abuse.
