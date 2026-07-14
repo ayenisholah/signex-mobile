@@ -52,6 +52,9 @@
         "projectId": "de8919c1-03f6-4f0e-b3bc-3a73f130fd29"
       }
     },
-    "owner": "ayenisholah"
+    "owner": "ayenisholah",
+    "updates": {
+      "url": "https://u.expo.dev/de8919c1-03f6-4f0e-b3bc-3a73f130fd29"
+    }
   }
 }
