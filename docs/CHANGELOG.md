@@ -19,6 +19,7 @@
 
 ### Changed
 
+- Replaced the vendor Apple and Google sign-in widgets with a shared `ProviderButton` that renders both as identical 52pt pills (SF Symbol Apple glyph, official multicolor Google mark) following each provider's brand guidelines, resolving the mismatched styling on the sign-in screen. The underlying `expo-apple-authentication` and Google native sign-in flows are unchanged.
 - Moved project-control documentation under `docs/` and recorded the temporary solo-maintainer administrator bypass policy.
 - Updated API client automation to record dependency releases so generated pull requests satisfy the documentation impact gate.
 - Reworked the M0 status shell around the approved signal-to-execution identity while preserving paper-only safety messaging.

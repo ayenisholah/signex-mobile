@@ -12,12 +12,11 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import * as AppleAuthentication from "expo-apple-authentication";
-import { GoogleSigninButton } from "@react-native-google-signin/google-signin";
 import type { AccessRequest, LinkedIdentity, Session } from "@ayenisholah/signex-api-client";
 
 import { useAuth } from "@/auth/AuthContext";
 import { GlassSurface } from "@/components/GlassSurface";
+import { ProviderButton } from "@/components/ProviderButton";
 import { themes, type Theme } from "@/theme/tokens";
 
 function Shell({ children }: PropsWithChildren) {
@@ -91,27 +90,14 @@ function SignIn() {
     <>
       <Heading title="Your control plane, securely yours" body="Use Apple or Google to request access. Signex never creates a password account and never merges identities by email." />
       <Card>
-        <View style={styles.providerStack}>
-          {Platform.OS === "ios" ? (
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonStyle={theme === themes.dark ? AppleAuthentication.AppleAuthenticationButtonStyle.WHITE : AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-              cornerRadius={12}
-              onPress={() => void signIn("APPLE")}
-              style={styles.providerButton}
-            />
-          ) : null}
-          {Platform.OS === "ios" ? (
-            <GoogleSigninButton
-              color={GoogleSigninButton.Color.Light}
-              onPress={() => void signIn("GOOGLE")}
-              size={GoogleSigninButton.Size.Wide}
-              style={styles.googleButton}
-            />
-          ) : (
-            <Text maxFontSizeMultiplier={2} style={[styles.caption, { color: theme.textSecondary }]}>This authentication slice is available on iOS only.</Text>
-          )}
-        </View>
+        {Platform.OS === "ios" ? (
+          <View style={styles.providerStack}>
+            <ProviderButton provider="APPLE" onPress={() => void signIn("APPLE")} />
+            <ProviderButton provider="GOOGLE" onPress={() => void signIn("GOOGLE")} />
+          </View>
+        ) : (
+          <Text maxFontSizeMultiplier={2} style={[styles.caption, { color: theme.textSecondary }]}>This authentication slice is available on iOS only.</Text>
+        )}
         <Text maxFontSizeMultiplier={2} style={[styles.caption, { color: theme.textSecondary }]}>New accounts stay isolated until an Owner approves Viewer access.</Text>
       </Card>
     </>
@@ -354,8 +340,6 @@ const styles = StyleSheet.create({
   body: { fontSize: 17, lineHeight: 25 },
   card: { borderRadius: 24, borderWidth: 1, gap: 16, overflow: "hidden", padding: 20 },
   providerStack: { alignItems: "center", gap: 12 },
-  providerButton: { height: 52, width: "100%" },
-  googleButton: { height: 52, width: "100%" },
   caption: { fontSize: 14, lineHeight: 21, textAlign: "center" },
   button: { alignItems: "center", borderRadius: 14, justifyContent: "center", minHeight: 52, minWidth: 96, paddingHorizontal: 18, paddingVertical: 12 },
   buttonText: { color: "#FFFFFF", fontSize: 16, fontWeight: "700", textAlign: "center" },
