@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "Perpeto",
+    "slug": "signex-mobile",
+    "version": "0.2.0",
+    "orientation": "portrait",
+    "scheme": "signex",
+    "icon": "./assets/brand/icon.png",
+    "userInterfaceStyle": "automatic",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "ios": {
+      "bundleIdentifier": "com.signex.mobile",
+      "usesAppleSignIn": true,
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.signex.mobile",
+      "predictiveBackGestureEnabled": false,
+      "adaptiveIcon": {
+        "backgroundColor": "#0A0C10",
+        "foregroundImage": "./assets/brand/android-foreground.png",
+        "monochromeImage": "./assets/brand/android-monochrome.png"
+      }
+    },
+    "web": {
+      "output": "static",
+      "bundler": "metro",
+      "favicon": "./assets/brand/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0A0C10",
+          "image": "./assets/brand/splash-lockup.png",
+          "imageWidth": 280
+        }
+      ],
+      "expo-secure-store",
+      "@react-native-google-signin/google-signin"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "de8919c1-03f6-4f0e-b3bc-3a73f130fd29"
+      }
+    },
+    "owner": "ayenisholah",
+    "updates": {
+      "url": "https://u.expo.dev/de8919c1-03f6-4f0e-b3bc-3a73f130fd29"
+    }
+  }
+}

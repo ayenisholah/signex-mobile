@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 700">
+  <!-- Splash lockup: perpetual-loop mark over the Perpeto wordmark, transparent (Expo composites over #0A0C10) -->
+  <g transform="translate(320 250) scale(0.30) translate(-512 -512)">
+    <g transform="rotate(-12 512 512)" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="88">
+      <path d="M512 512 C512 352 272 352 272 512 C272 672 512 672 512 512" stroke="#34E0A1" />
+      <path d="M512 512 C512 352 752 352 752 512 C752 672 512 672 512 512" stroke="#38BDF8" />
+    </g>
+  </g>
+  <text x="320" y="560" text-anchor="middle" fill="#F2F5F9"
+    font-family="Segoe UI, Arial, sans-serif" font-size="96" font-weight="700" letter-spacing="-2">Perpeto</text>
+  <text x="320" y="612" text-anchor="middle" fill="#98A2B3"
+    font-family="Segoe UI, Arial, sans-serif" font-size="23" letter-spacing="6">THE PERPETUAL EDGE</text>
+</svg>

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Android themed (monochrome) icon: single white loop silhouette, ~62% safe zone, transparent -->
+  <g transform="translate(512 512) scale(0.62) translate(-512 -512)">
+    <g transform="rotate(-12 512 512)" fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round" stroke-width="88">
+      <path d="M512 512 C512 352 272 352 272 512 C272 672 512 672 512 512" />
+      <path d="M512 512 C512 352 752 352 752 512 C752 672 512 672 512 512" />
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- Perpeto perpetual-loop mark — two-tone ribbon (mint + sky), tilted up, for dark surfaces -->
+  <g transform="rotate(-12 512 512)" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="88">
+    <path d="M512 512 C512 352 272 352 272 512 C272 672 512 672 512 512" stroke="#34E0A1" />
+    <path d="M512 512 C512 352 752 352 752 512 C752 672 512 672 512 512" stroke="#38BDF8" />
+  </g>
+</svg>
