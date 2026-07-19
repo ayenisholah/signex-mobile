@@ -20,6 +20,8 @@ import type {
   Opportunity,
   OpportunityFilter,
   OpportunitySort,
+  Position,
+  PositionLeg,
   RiskLimits,
   RouteType,
   Session,
@@ -389,6 +391,44 @@ function useRiskLimits(): RiskLimits | undefined {
   return limits;
 }
 
+interface PositionsState {
+  readonly positions: readonly Position[];
+  readonly loading: boolean;
+  readonly error: string | undefined;
+  readonly reload: () => void;
+}
+
+function usePositions(): PositionsState {
+  const { controller } = useAuth();
+  const [positions, setPositions] = useState<readonly Position[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>();
+
+  const reload = useCallback(() => {
+    setLoading(true);
+    setError(undefined);
+    void controller.client
+      .listPositions()
+      .then((list) => setPositions(list.positions))
+      .catch((cause: unknown) => {
+        setError(cause instanceof Error ? cause.message : "Could not load positions.");
+      })
+      .finally(() => setLoading(false));
+  }, [controller]);
+
+  useEffect(() => {
+    queueMicrotask(reload);
+  }, [reload]);
+
+  return { positions, loading, error, reload };
+}
+
+function useCanTrade(): boolean {
+  const { state } = useAuth();
+  if (state.kind !== "AUTHENTICATED") return false;
+  return state.user.roles.some((role) => role === "OWNER" || role === "TRADER");
+}
+
 function Pill({ label, active, onPress }: { readonly label: string; readonly active: boolean; readonly onPress: () => void }) {
   const theme = useColorScheme() === "light" ? themes.light : themes.dark;
   return (
@@ -440,10 +480,33 @@ function DetailLine({ label, value }: { readonly label: string; readonly value: 
   );
 }
 
-function OpportunityDetail({ opportunity, onClose }: { readonly opportunity: Opportunity; readonly onClose: () => void }) {
+function OpportunityDetail({
+  opportunity,
+  onClose,
+  onOpen,
+  canOpen,
+}: {
+  readonly opportunity: Opportunity;
+  readonly onClose: () => void;
+  readonly onOpen: (opportunity: Opportunity) => Promise<void>;
+  readonly canOpen: boolean;
+}) {
   const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  const [opening, setOpening] = useState(false);
+  const [error, setError] = useState<string>();
   const leg = (label: string, l: Opportunity["long_leg"]) =>
     `${label} ${l.venue}: ${formatPercent(l.predicted_rate)} (p10 ${formatPercent(l.p10_rate)} · p90 ${formatPercent(l.p90_rate)})`;
+
+  const open = async () => {
+    setOpening(true);
+    setError(undefined);
+    try {
+      await onOpen(opportunity);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not open the paper position.");
+      setOpening(false);
+    }
+  };
   return (
     <Modal animationType="slide" transparent onRequestClose={onClose} visible>
       <View style={styles.modalBackdrop}>
@@ -477,7 +540,17 @@ function OpportunityDetail({ opportunity, onClose }: { readonly opportunity: Opp
             <DetailLine label="Within risk limits" value={opportunity.within_limits ? "Yes" : "No"} />
             <Text maxFontSizeMultiplier={2} style={[styles.detailLeg, { color: theme.textSecondary }]}>{leg("Long", opportunity.long_leg)}</Text>
             <Text maxFontSizeMultiplier={2} style={[styles.detailLeg, { color: theme.textSecondary }]}>{leg("Short", opportunity.short_leg)}</Text>
-            <Text maxFontSizeMultiplier={2} style={[styles.caption, { color: theme.textSecondary, textAlign: "left", marginTop: 8 }]}>Paper — monitoring only. No execution controls.</Text>
+            {error === undefined ? null : <Text accessibilityRole="alert" style={{ color: theme.critical, marginTop: 8 }}>{error}</Text>}
+            {canOpen && opportunity.within_limits ? (
+              <View style={{ marginTop: 12 }}>
+                <Button disabled={opening} label={opening ? "Opening paper position…" : "Open paper position"} onPress={() => void open()} />
+                <Text maxFontSizeMultiplier={2} style={[styles.caption, { color: theme.textSecondary, textAlign: "left", marginTop: 8 }]}>Simulated fill — paper only. No live orders are placed.</Text>
+              </View>
+            ) : (
+              <Text maxFontSizeMultiplier={2} style={[styles.caption, { color: theme.textSecondary, textAlign: "left", marginTop: 8 }]}>
+                {opportunity.within_limits ? "Paper — monitoring only. Trader access is required to open positions." : "Outside risk limits — not open-eligible."}
+              </Text>
+            )}
           </ScrollView>
         </SafeAreaView>
       </View>
@@ -513,11 +586,22 @@ const SORTS: readonly { readonly key: OpportunitySort; readonly label: string }[
   { key: "capacity", label: "Capacity" },
 ];
 
-function Scanner() {
+function Scanner({ onOpened }: { readonly onOpened: () => void }) {
   const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  const { controller } = useAuth();
+  const canTrade = useCanTrade();
   const [route, setRoute] = useState<"ALL" | RouteType>("ALL");
   const [sort, setSort] = useState<OpportunitySort>("default");
   const [selected, setSelected] = useState<Opportunity>();
+
+  const handleOpen = useCallback(
+    async (opportunity: Opportunity) => {
+      await controller.client.createPosition({ route_id: opportunity.route_id });
+      setSelected(undefined);
+      onOpened();
+    },
+    [controller, onOpened],
+  );
 
   const filter = useMemo<OpportunityFilter>(
     () => ({
@@ -570,16 +654,98 @@ function Scanner() {
           ))
         )}
       </Card>
-      {selected === undefined ? null : <OpportunityDetail opportunity={selected} onClose={() => setSelected(undefined)} />}
+      {selected === undefined ? null : (
+        <OpportunityDetail
+          opportunity={selected}
+          onClose={() => setSelected(undefined)}
+          onOpen={handleOpen}
+          canOpen={canTrade}
+        />
+      )}
+    </>
+  );
+}
+
+function LegCard({ label, leg }: { readonly label: string; readonly leg: PositionLeg }) {
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  return (
+    <View style={styles.legBlock}>
+      <Text maxFontSizeMultiplier={2} style={[styles.legHeader, { color: theme.textSecondary }]}>
+        {label} · {leg.venue} · {leg.symbol}
+      </Text>
+      <DetailLine label="Filled" value={`${leg.filled_qty} @ ${formatUsd(leg.avg_fill_price)}`} />
+      <DetailLine label="Fees" value={formatUsd(leg.fees)} />
+    </View>
+  );
+}
+
+function PositionCard({ position }: { readonly position: Position }) {
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  const open = position.state === "OPEN";
+  return (
+    <View style={[styles.oppRow, { borderColor: theme.border }]}>
+      <View style={styles.oppTop}>
+        <Text maxFontSizeMultiplier={2} style={[styles.oppRoute, { color: theme.textPrimary }]}>
+          {position.underlying} · long {position.long_leg.venue} → short {position.short_leg.venue}
+        </Text>
+        <View style={[styles.badge, { backgroundColor: theme.field }]}>
+          <Text maxFontSizeMultiplier={2} style={[styles.badgeText, { color: open ? theme.signal : theme.critical }]}>
+            {position.state}
+          </Text>
+        </View>
+      </View>
+      <View style={styles.oppMetrics}>
+        <Text maxFontSizeMultiplier={2} style={[styles.oppMetric, { color: theme.textSecondary }]}>Notional {formatUsd(position.target_notional)}</Text>
+        <Text maxFontSizeMultiplier={2} style={[styles.oppMetric, { color: theme.textSecondary }]}>Reserved {formatUsd(position.reserved_capital)}</Text>
+        <Text maxFontSizeMultiplier={2} style={[styles.oppMetric, { color: theme.textSecondary }]}>Residual {formatUsd(position.residual_delta_usd)}</Text>
+      </View>
+      <LegCard label="Long" leg={position.long_leg} />
+      <LegCard label="Short" leg={position.short_leg} />
+    </View>
+  );
+}
+
+function Positions() {
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  const { positions, loading, error, reload } = usePositions();
+  return (
+    <>
+      <View style={styles.headingBlock}>
+        <Text accessibilityRole="header" maxFontSizeMultiplier={2} style={[styles.title, { color: theme.textPrimary }]}>Positions</Text>
+        <Text maxFontSizeMultiplier={2} style={[styles.body, { color: theme.textSecondary }]}>
+          Opened paper positions and their simulated fills. Paper only — no live orders are placed.
+        </Text>
+      </View>
+      <View style={styles.scannerBar}>
+        <Text maxFontSizeMultiplier={2} style={[styles.caption, { color: theme.textSecondary, textAlign: "left" }]}>
+          {loading ? "Loading…" : `${positions.length} position${positions.length === 1 ? "" : "s"}`}
+        </Text>
+        <Pressable accessibilityRole="button" onPress={reload} style={styles.textButton}>
+          <Text maxFontSizeMultiplier={2} style={{ color: theme.accent, fontWeight: "700" }}>Refresh</Text>
+        </Pressable>
+      </View>
+      {error === undefined ? null : <Text accessibilityRole="alert" style={{ color: theme.critical }}>{error}</Text>}
+      <Card>
+        {loading && positions.length === 0 ? (
+          <ActivityIndicator accessibilityLabel="Loading positions" />
+        ) : positions.length === 0 ? (
+          <Text maxFontSizeMultiplier={2} style={[styles.caption, { color: theme.textSecondary }]}>
+            No paper positions yet. Open one from an opportunity in the Scanner.
+          </Text>
+        ) : (
+          positions.map((position) => <PositionCard key={position.id} position={position} />)
+        )}
+      </Card>
     </>
   );
 }
 
 function AuthenticatedHome() {
   const theme = useColorScheme() === "light" ? themes.light : themes.dark;
-  const [tab, setTab] = useState<"scanner" | "security">("scanner");
-  const tabs: readonly { readonly key: "scanner" | "security"; readonly label: string }[] = [
+  const [tab, setTab] = useState<"scanner" | "positions" | "security">("scanner");
+  const tabs: readonly { readonly key: "scanner" | "positions" | "security"; readonly label: string }[] = [
     { key: "scanner", label: "Scanner" },
+    { key: "positions", label: "Positions" },
     { key: "security", label: "Security" },
   ];
   return (
@@ -602,7 +768,7 @@ function AuthenticatedHome() {
           );
         })}
       </View>
-      {tab === "scanner" ? <Scanner /> : <SecurityCenter />}
+      {tab === "scanner" ? <Scanner onOpened={() => setTab("positions")} /> : tab === "positions" ? <Positions /> : <SecurityCenter />}
     </>
   );
 }
@@ -665,6 +831,8 @@ const styles = StyleSheet.create({
   detailLabel: { fontSize: 15 },
   detailValue: { fontSize: 15, fontVariant: ["tabular-nums"], fontWeight: "600" },
   detailLeg: { fontSize: 14, fontVariant: ["tabular-nums"], marginTop: 4 },
+  legBlock: { gap: 2, marginTop: 8 },
+  legHeader: { fontSize: 13, fontWeight: "700", letterSpacing: 0.3 },
   modalBackdrop: { backgroundColor: "rgba(0,0,0,0.5)", flex: 1, justifyContent: "flex-end" },
   modalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "88%" },
   modalScroll: { gap: 4, padding: 24 },
