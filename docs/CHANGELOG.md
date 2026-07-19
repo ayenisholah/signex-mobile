@@ -4,6 +4,7 @@
 
 ### Added
 
+- M2 Slice 2 — the Scanner gains route-type filters and a sort control, an **opportunity detail** sheet (tap a route) showing the full cost/forecast breakdown, per-leg forecasts, and the paper capital reservation, and an **Active risk limits** card fed by `GET /api/v1/risk/limits`. Consumes `@ayenisholah/perpeto-api-client@0.4.0` (`getOpportunity`, `getRiskLimits`, richer filters). Monitoring only.
 - M2 Slice 1 — a **Scanner** screen for authenticated users: a segmented `[Scanner | Security]` home that lists ranked funding-arbitrage opportunities from the paper backend (`GET /api/v1/opportunities`) via a `useOpportunities` hook, showing net APR, win probability, capacity, venue route, and scan freshness, with manual refresh. Monitoring only — no execution controls. Consumes `@ayenisholah/perpeto-api-client@0.3.0`.
 - Initial Expo SDK 57 repository, documentation controls, paper-backend status shell, tests, CI, EAS preview workflow, API update workflow, and shared-document drift checks.
 - Convergent S brand assets, light/dark theme tokens, accessible Liquid Glass surfaces, and an iOS TestFlight delivery profile.

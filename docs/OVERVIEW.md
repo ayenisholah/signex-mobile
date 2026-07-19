@@ -1,12 +1,12 @@
-# Signex Overview
+# Perpeto Overview
 
 <!-- SHARED-CONTENT-VERSION: 1 -->
 
-## What problem does Signex solve?
+## What problem does Perpeto solve?
 
 Funding-rate arbitrage requires continuously comparing incompatible venue data, estimating the return after every cost, coordinating two non-atomic leveraged trades, and recovering safely when one venue fills while the other fails. Doing this manually is slow, difficult to audit, and exposes capital to silent directional, liquidation, venue, and operational risk.
 
-Signex centralizes that work in a private server-side control plane. It discovers conservative spot–perpetual and perpetual–perpetual opportunities, applies portfolio and venue risk limits, coordinates both legs, reconciles venue-authoritative state, records accounting evidence, and gives operators an authenticated mobile control surface.
+Perpeto centralizes that work in a private server-side control plane. It discovers conservative spot–perpetual and perpetual–perpetual opportunities, applies portfolio and venue risk limits, coordinates both legs, reconciles venue-authoritative state, records accounting evidence, and gives operators an authenticated mobile control surface.
 
 ## Primary objectives
 
@@ -16,7 +16,7 @@ Signex centralizes that work in a private server-side control plane. It discover
 - Separate mobile operations from credentials, signing, trading logic, and reconciliation.
 - Certify each venue and route progressively through paper, shadow, pilot, and restricted live operation.
 
-Signex does not guarantee profit, atomic cross-venue fills, funding receipt, liquidity, or venue safety.
+Perpeto does not guarantee profit, atomic cross-venue fills, funding receipt, liquidity, or venue safety.
 
 ## Real-world integration
 

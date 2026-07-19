@@ -1,6 +1,6 @@
-# Signex Mobile
+# Perpeto Mobile
 
-Signex Mobile is the Expo iOS and Android operations client for the private Signex funding-rate arbitrage backend. It displays opportunities, execution state, risk, accounting, alerts, approvals, and system health. It never runs trading logic or stores exchange credentials.
+Perpeto Mobile is the Expo iOS and Android operations client for the private Perpeto funding-rate arbitrage backend. It displays opportunities, execution state, risk, accounting, alerts, approvals, and system health. It never runs trading logic or stores exchange credentials.
 
 ## Current status
 

@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Report a reproducible Signex mobile defect
+about: Report a reproducible Perpeto mobile defect
 title: "[BUG] "
 labels: bug
 ---

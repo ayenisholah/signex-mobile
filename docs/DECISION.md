@@ -7,7 +7,7 @@ Accepted entries are append-only. Supersede an earlier decision with a new ID in
 - Status: Accepted
 - Date: 2026-07-14
 - Scope: Shared
-- Decision: Maintain `signex-backend` and `signex-mobile` as separate public GitHub repositories. Do not create a third governance repository.
+- Decision: Maintain `perpeto-backend` and `perpeto-mobile` as separate public GitHub repositories. Do not create a third governance repository.
 - Consequences: Cross-repository contracts and selected documentation require automation and explicit ownership.
 
 ## DEC-0002 — Shared documentation ownership
@@ -50,12 +50,12 @@ Accepted entries are append-only. Supersede an earlier decision with a new ID in
 - Decision: Required checks, pull requests, code-owner review, and linear history apply normally, but administrator enforcement remains disabled while the repository has only one trusted maintainer. Enable administrator enforcement when an independent reviewer is available.
 - Consequences: The owner can perform an auditable emergency or bootstrap push; routine work still uses pull requests. Admin bypass must not be used to conceal a failing check.
 
-## DEC-0007 — Google and Apple identity with Signex-authoritative sessions
+## DEC-0007 — Google and Apple identity with Perpeto-authoritative sessions
 
 - Status: Accepted
 - Date: 2026-07-14
 - Scope: Shared
-- Decision: Replace password, magic-link, phone, and guest authentication with native Google and Apple identity. Provider subjects are keyed by `(provider, provider_subject)` and are never matched or merged by email. Signex remains authoritative for pending approval, users, roles, mandatory privileged-role TOTP, recovery codes, devices, rotating sessions, step-up proofs, revocation, and deletion. Access tokens are 15-minute Ed25519 JWTs held in memory; device-bound opaque refresh tokens rotate once and are stored hashed server-side and in mobile Secure Store. The first socially authenticated user consumes a one-use deployment bootstrap token to become Owner.
+- Decision: Replace password, magic-link, phone, and guest authentication with native Google and Apple identity. Provider subjects are keyed by `(provider, provider_subject)` and are never matched or merged by email. Perpeto remains authoritative for pending approval, users, roles, mandatory privileged-role TOTP, recovery codes, devices, rotating sessions, step-up proofs, revocation, and deletion. Access tokens are 15-minute Ed25519 JWTs held in memory; device-bound opaque refresh tokens rotate once and are stored hashed server-side and in mobile Secure Store. The first socially authenticated user consumes a one-use deployment bootstrap token to become Owner.
 - Consequences: Open registration creates an isolated `PENDING` account; approval initially grants Viewer. Apple and Google codes/tokens require server-side issuer, audience, signature, expiry, state, nonce, subject, and replay checks. Explicit linking requires fresh authentication (plus TOTP for privileged users), the final provider and final Owner are protected, and deletion erases PII/provider credentials while immutable evidence retains only a non-identifying audit pseudonym. Biometrics and Android authentication are deferred.
 
 ## DEC-0008 — Authentication runtime dependency set
@@ -71,5 +71,5 @@ Accepted entries are append-only. Supersede an earlier decision with a new ID in
 - Status: Accepted
 - Date: 2026-07-19
 - Scope: Shared
-- Decision: Version 1 runs a single shared backend for development and TestFlight. Gate a self-service registration mode behind `SIGNEX_OPEN_REGISTRATION` (default false). When enabled, a new social sign-in is admitted immediately as an active account with the full privileged role set (`OWNER`, `TRADER`, `APPROVER`), and TOTP MFA is waived, so each tester can exercise the complete app without a pending queue, Owner approval, or authenticator setup. This deliberately relaxes DEC-0007's "open registration creates a `PENDING` account; approval initially grants Viewer" and the PRODUCT_SPEC mandatory-privileged-role-MFA rule for this deployment only. Version 2 provisions an isolated backend per user and restores gated approval and MFA; this decision is superseded at that point.
+- Decision: Version 1 runs a single shared backend for development and TestFlight. Gate a self-service registration mode behind `PERPETO_OPEN_REGISTRATION` (default false). When enabled, a new social sign-in is admitted immediately as an active account with the full privileged role set (`OWNER`, `TRADER`, `APPROVER`), and TOTP MFA is waived, so each tester can exercise the complete app without a pending queue, Owner approval, or authenticator setup. This deliberately relaxes DEC-0007's "open registration creates a `PENDING` account; approval initially grants Viewer" and the PRODUCT_SPEC mandatory-privileged-role-MFA rule for this deployment only. Version 2 provisions an isolated backend per user and restores gated approval and MFA; this decision is superseded at that point.
 - Consequences: The flag is off by default, so isolated or production deployments keep the strict DEC-0007 flow — the pending-approval and Owner-approval endpoints, screens, and the one-use bootstrap-Owner path remain in the codebase and behave unchanged when the flag is unset. Because every open-registration user is a privileged Owner without MFA, step-up-gated and identity-linking flows that require a TOTP proof are not usable under the flag; they return with v2 isolation. The mobile client shows instant-access sign-in copy for the shared v1 build. The waiver is a documented, reversible deployment policy applied in the service layer (`compute_next`), not in `funding_arb_domain::auth`, whose invariants stay strict.

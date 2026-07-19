@@ -1,6 +1,6 @@
 # iOS TestFlight Delivery
 
-Signex uses EAS project `@ayenisholah/signex-mobile`, Apple bundle identifier `com.signex.mobile`, and App Store Connect app `6790819875`. The `testflight` EAS profile builds only iOS and submits the archive to TestFlight. Android delivery is outside this slice.
+Perpeto uses EAS project `@ayenisholah/signex-mobile`, Apple bundle identifier `com.signex.mobile`, and App Store Connect app `6790819875`. The `testflight` EAS profile builds only iOS and submits the archive to TestFlight. Android delivery is outside this slice.
 
 Never paste an Apple `.p8` key, OAuth client secret, Expo token, Apple password, two-factor code, certificate private key, or provisioning profile into an issue, pull request, source file, terminal argument, or chat. Client IDs and the reversed Google URL scheme are public identifiers; private keys and client secrets are server or provider credentials.
 
@@ -17,14 +17,14 @@ Never paste an Apple `.p8` key, OAuth client secret, Expo token, Apple password,
 
 Use the same Google Cloud project for both clients.
 
-1. Open [Google Auth Platform](https://console.cloud.google.com/auth/overview) and select or create the Signex project.
-2. Under **Branding**, set the app name to `Signex`, select a support email, add the production home page and privacy-policy URL, and add an operational developer contact.
+1. Open [Google Auth Platform](https://console.cloud.google.com/auth/overview) and select or create the Perpeto project.
+2. Under **Branding**, set the app name to `Perpeto`, select a support email, add the production home page and privacy-policy URL, and add an operational developer contact.
 3. Under **Audience**, choose **External**. While the project is in testing, add every Google account that will test the TestFlight build.
 4. Under **Data Access**, request only `openid`, `email`, and `profile` for authentication.
-5. Under **Clients**, create an **iOS** OAuth client named `Signex iOS` with bundle ID `com.signex.mobile`.
+5. Under **Clients**, create an **iOS** OAuth client named `Perpeto iOS` with bundle ID `com.signex.mobile`.
 6. Copy the iOS client ID. It has the form `NUMBER-TEXT.apps.googleusercontent.com`.
 7. Copy the displayed iOS URL scheme. It has the form `com.googleusercontent.apps.NUMBER-TEXT`.
-8. Under **Clients**, create a **Web application** OAuth client named `Signex Backend`.
+8. Under **Clients**, create a **Web application** OAuth client named `Perpeto Backend`.
 9. Copy the Web client ID and client secret. The Web client ID is used by the mobile SDK to request a server authorization code. The client secret stays on the backend and must never be added to the mobile environment.
 
 Google documents the required iOS client, reversed URL scheme, and separate server client in its [Google Sign-In for iOS guide](https://developers.google.com/identity/sign-in/ios/start-integrating).
@@ -56,15 +56,15 @@ gh api repos/ayenisholah/signex-mobile/environments/preview/variables
 
 1. Open [Apple Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/identifiers/list).
 2. Select the explicit App ID for `com.signex.mobile`.
-3. Enable **Sign in with Apple**, select **Configure**, and make this the primary App ID unless it must be grouped with an existing Signex primary App ID.
-4. Optionally enter the Signex Apple server-notification endpoint after that backend endpoint exists.
+3. Enable **Sign in with Apple**, select **Configure**, and make this the primary App ID unless it must be grouped with an existing Perpeto primary App ID.
+4. Optionally enter the Perpeto Apple server-notification endpoint after that backend endpoint exists.
 5. Save and confirm the capability change.
 
 Apple notes that changing a capability invalidates affected provisioning profiles. Run `npx eas-cli@latest credentials --platform ios` and let EAS repair or regenerate the App Store profile before the next build. See Apple's [capability instructions](https://developer.apple.com/help/account/identifiers/enable-app-capabilities/).
 
 For server-side Apple authorization-code exchange:
 
-1. In the Apple Developer portal, open **Certificates, Identifiers & Profiles → Keys** and create `Signex Apple Authentication`.
+1. In the Apple Developer portal, open **Certificates, Identifiers & Profiles → Keys** and create `Perpeto Apple Authentication`.
 2. Enable **Sign in with Apple**, select **Configure**, and associate `com.signex.mobile` with the key.
 3. Confirm the key and download its `.p8` file immediately. Apple permits only one download.
 4. Record the Apple Team ID and Sign in with Apple Key ID.
@@ -74,9 +74,9 @@ See Apple's [Sign in with Apple private-key guide](https://developer.apple.com/h
 
 ## 3. Configure App Store Connect submission
 
-1. Open [App Store Connect](https://appstoreconnect.apple.com/) and verify that the Signex app has Apple ID `6790819875` and bundle ID `com.signex.mobile`.
+1. Open [App Store Connect](https://appstoreconnect.apple.com/) and verify that the Perpeto app has Apple ID `6790819875` and bundle ID `com.signex.mobile`.
 2. As Account Holder, open **Users and Access → Integrations → App Store Connect API** and request API access if it is not enabled.
-3. As Account Holder or Admin, open **Team Keys**, generate a key named `Signex EAS Submit`, and grant only the role needed to upload builds.
+3. As Account Holder or Admin, open **Team Keys**, generate a key named `Perpeto EAS Submit`, and grant only the role needed to upload builds.
 4. Record the Issuer ID and Key ID, then download the `.p8` key. The download is available once.
 5. From the mobile repository, run `npx eas-cli@latest credentials --platform ios`.
 6. Choose the `testflight` profile, then **App Store Connect → Manage your API Key → Set up your project to use an API Key for EAS Submit**. Supply the key only in the protected EAS prompt.
