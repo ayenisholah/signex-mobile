@@ -13,3 +13,5 @@
 | M6 | Controlled live rollout | Approved production automation and venue-by-venue pilot evidence | Not started |
 
 No milestone closes from code completion alone. Its traceability, tests, security evidence, documentation, and backend/mobile compatibility must also pass.
+
+Registration policy: version 1 runs one shared backend with `SIGNEX_OPEN_REGISTRATION` enabled so every tester gets immediate full access (DEC-0009). Version 2 provisions an isolated backend per user and restores gated approval and mandatory MFA; per-user backend isolation is tracked as a post-M1 architectural objective.

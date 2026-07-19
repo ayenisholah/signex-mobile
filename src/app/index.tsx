@@ -88,7 +88,7 @@ function SignIn() {
   const theme = useColorScheme() === "light" ? themes.light : themes.dark;
   return (
     <>
-      <Heading title="Your control plane, securely yours" body="Use Apple or Google to request access. Signex never creates a password account and never merges identities by email." />
+      <Heading title="Your control plane, securely yours" body="Use Apple or Google to sign in. Signex never creates a password account and never merges identities by email." />
       <Card>
         {Platform.OS === "ios" ? (
           <View style={styles.providerStack}>
@@ -98,7 +98,7 @@ function SignIn() {
         ) : (
           <Text maxFontSizeMultiplier={2} style={[styles.caption, { color: theme.textSecondary }]}>This authentication slice is available on iOS only.</Text>
         )}
-        <Text maxFontSizeMultiplier={2} style={[styles.caption, { color: theme.textSecondary }]}>New accounts stay isolated until an Owner approves Viewer access.</Text>
+        <Text maxFontSizeMultiplier={2} style={[styles.caption, { color: theme.textSecondary }]}>New accounts get full access right away.</Text>
       </Card>
     </>
   );
