@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type PropsWithChildren } from "react";
+import { useCallback, useEffect, useMemo, useState, type PropsWithChildren } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
-import type { AccessRequest, LinkedIdentity, Session } from "@ayenisholah/perpeto-api-client";
+import type { AccessRequest, LinkedIdentity, Opportunity, Session } from "@ayenisholah/perpeto-api-client";
 
 import { useAuth } from "@/auth/AuthContext";
 import { GlassSurface } from "@/components/GlassSurface";
@@ -317,6 +317,161 @@ function SecurityCenter() {
   );
 }
 
+function formatPercent(value: number): string {
+  return `${(value * 100).toFixed(2)}%`;
+}
+
+function formatUsd(value: number): string {
+  return `$${Math.round(value).toLocaleString("en-US")}`;
+}
+
+function formatClock(iso: string): string {
+  if (iso === "") return "—";
+  const parsed = new Date(iso);
+  return Number.isNaN(parsed.getTime())
+    ? "—"
+    : parsed.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+interface OpportunitiesState {
+  readonly opportunities: readonly Opportunity[];
+  readonly scannedAt: string;
+  readonly loading: boolean;
+  readonly error: string | undefined;
+  readonly reload: () => void;
+}
+
+function useOpportunities(): OpportunitiesState {
+  const { controller } = useAuth();
+  const [opportunities, setOpportunities] = useState<readonly Opportunity[]>([]);
+  const [scannedAt, setScannedAt] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>();
+
+  const reload = useCallback(() => {
+    setLoading(true);
+    setError(undefined);
+    void controller.client
+      .listOpportunities()
+      .then((scan) => {
+        setOpportunities(scan.opportunities);
+        setScannedAt(scan.scanned_at);
+      })
+      .catch((cause: unknown) => {
+        setError(cause instanceof Error ? cause.message : "Could not load opportunities.");
+      })
+      .finally(() => setLoading(false));
+  }, [controller]);
+
+  useEffect(() => {
+    queueMicrotask(reload);
+  }, [reload]);
+
+  return { opportunities, scannedAt, loading, error, reload };
+}
+
+function OpportunityRow({ opportunity }: { readonly opportunity: Opportunity }) {
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  const positive = opportunity.net_apr >= 0;
+  return (
+    <View style={[styles.oppRow, { borderColor: theme.border }]}>
+      <View style={styles.oppTop}>
+        <View style={[styles.badge, { backgroundColor: theme.field }]}>
+          <Text maxFontSizeMultiplier={2} style={[styles.badgeText, { color: theme.velocity }]}>
+            {opportunity.route_type === "SPOT_PERP" ? "SPOT · PERP" : "PERP · PERP"}
+          </Text>
+        </View>
+        <Text maxFontSizeMultiplier={2} style={[styles.oppApr, { color: positive ? theme.signal : theme.critical }]}>
+          {formatPercent(opportunity.net_apr)}
+        </Text>
+      </View>
+      <Text maxFontSizeMultiplier={2} style={[styles.oppRoute, { color: theme.textPrimary }]}>
+        {opportunity.underlying} · long {opportunity.long_venue} → short {opportunity.short_venue}
+      </Text>
+      <View style={styles.oppMetrics}>
+        <Text maxFontSizeMultiplier={2} style={[styles.oppMetric, { color: theme.textSecondary }]}>
+          Win {formatPercent(opportunity.profitability_probability)}
+        </Text>
+        <Text maxFontSizeMultiplier={2} style={[styles.oppMetric, { color: theme.textSecondary }]}>
+          Cap {formatUsd(opportunity.available_capacity)}
+        </Text>
+        <Text maxFontSizeMultiplier={2} style={[styles.oppMetric, { color: theme.textSecondary }]}>
+          Funds {formatClock(opportunity.next_funding_at)}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+function Scanner() {
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  const { opportunities, scannedAt, loading, error, reload } = useOpportunities();
+  return (
+    <>
+      <View style={styles.headingBlock}>
+        <Text accessibilityRole="header" maxFontSizeMultiplier={2} style={[styles.title, { color: theme.textPrimary }]}>Opportunities</Text>
+        <Text maxFontSizeMultiplier={2} style={[styles.body, { color: theme.textSecondary }]}>
+          Ranked funding-arbitrage routes from the paper scanner. Monitoring only — execution arrives in a later release.
+        </Text>
+      </View>
+      <View style={styles.scannerBar}>
+        <Text maxFontSizeMultiplier={2} style={[styles.caption, { color: theme.textSecondary, textAlign: "left" }]}>
+          {loading ? "Scanning…" : scannedAt === "" ? "No scan yet" : `As of ${formatClock(scannedAt)}`}
+        </Text>
+        <Pressable accessibilityRole="button" onPress={reload} style={styles.textButton}>
+          <Text maxFontSizeMultiplier={2} style={{ color: theme.accent, fontWeight: "700" }}>Refresh</Text>
+        </Pressable>
+      </View>
+      {error === undefined ? null : <Text accessibilityRole="alert" style={{ color: theme.critical }}>{error}</Text>}
+      <Card>
+        {loading && opportunities.length === 0 ? (
+          <ActivityIndicator accessibilityLabel="Loading opportunities" />
+        ) : opportunities.length === 0 ? (
+          <Text maxFontSizeMultiplier={2} style={[styles.caption, { color: theme.textSecondary }]}>
+            No eligible opportunities in the latest scan.
+          </Text>
+        ) : (
+          opportunities.map((opportunity) => (
+            <OpportunityRow key={opportunity.route_id} opportunity={opportunity} />
+          ))
+        )}
+      </Card>
+    </>
+  );
+}
+
+function AuthenticatedHome() {
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  const [tab, setTab] = useState<"scanner" | "security">("scanner");
+  const tabs: readonly { readonly key: "scanner" | "security"; readonly label: string }[] = [
+    { key: "scanner", label: "Scanner" },
+    { key: "security", label: "Security" },
+  ];
+  return (
+    <>
+      <View style={[styles.segmented, { borderColor: theme.border }]}>
+        {tabs.map((entry) => {
+          const active = tab === entry.key;
+          return (
+            <Pressable
+              key={entry.key}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              onPress={() => setTab(entry.key)}
+              style={[styles.segment, active ? { backgroundColor: theme.accent } : null]}
+            >
+              <Text maxFontSizeMultiplier={2} style={[styles.segmentText, { color: active ? "#04120C" : theme.textSecondary }]}>
+                {entry.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {tab === "scanner" ? <Scanner /> : <SecurityCenter />}
+    </>
+  );
+}
+
 export default function Index() {
   const { state, retry } = useAuth();
   return (
@@ -326,7 +481,7 @@ export default function Index() {
       {state.kind === "PENDING_APPROVAL" || state.kind === "BOOTSTRAP_REQUIRED" ? <Pending /> : null}
       {state.kind === "MFA_REQUIRED" ? <MfaChallenge /> : null}
       {state.kind === "MFA_ENROLLMENT_REQUIRED" ? <MfaEnrollment /> : null}
-      {state.kind === "AUTHENTICATED" ? <SecurityCenter /> : null}
+      {state.kind === "AUTHENTICATED" ? <AuthenticatedHome /> : null}
       {state.kind === "OFFLINE_LOCKED" || state.kind === "ERROR" ? (
         <>
           <Heading title="Perpeto is locked" body={state.message} />
@@ -356,6 +511,18 @@ const styles = StyleSheet.create({
   input: { borderRadius: 14, borderWidth: 1, fontSize: 17, minHeight: 52, paddingHorizontal: 16 },
   codeInput: { fontSize: 26, fontVariant: ["tabular-nums"], letterSpacing: 6, textAlign: "center" },
   label: { fontSize: 17, fontWeight: "700" },
+  segmented: { borderRadius: 14, borderWidth: 1, flexDirection: "row", gap: 4, marginTop: 20, padding: 4 },
+  segment: { alignItems: "center", borderRadius: 10, flex: 1, justifyContent: "center", minHeight: 40 },
+  segmentText: { fontSize: 15, fontWeight: "700" },
+  scannerBar: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
+  oppRow: { borderTopWidth: 1, gap: 8, paddingVertical: 14 },
+  oppTop: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
+  oppApr: { fontSize: 22, fontVariant: ["tabular-nums"], fontWeight: "800" },
+  oppRoute: { fontSize: 16, fontWeight: "600" },
+  oppMetrics: { flexDirection: "row", flexWrap: "wrap", gap: 16 },
+  oppMetric: { fontSize: 14, fontVariant: ["tabular-nums"] },
+  badge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+  badgeText: { fontSize: 12, fontWeight: "800", letterSpacing: 0.5 },
   secret: { fontFamily: Platform.select({ ios: "Menlo", default: "monospace" }), fontSize: 16, lineHeight: 24 },
   recoveryCodes: { fontFamily: Platform.select({ ios: "Menlo", default: "monospace" }), fontSize: 18, lineHeight: 28 },
   sectionTitle: { fontSize: 20, fontWeight: "800" },

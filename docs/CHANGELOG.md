@@ -4,6 +4,7 @@
 
 ### Added
 
+- M2 Slice 1 — a **Scanner** screen for authenticated users: a segmented `[Scanner | Security]` home that lists ranked funding-arbitrage opportunities from the paper backend (`GET /api/v1/opportunities`) via a `useOpportunities` hook, showing net APR, win probability, capacity, venue route, and scan freshness, with manual refresh. Monitoring only — no execution controls. Consumes `@ayenisholah/perpeto-api-client@0.3.0`.
 - Initial Expo SDK 57 repository, documentation controls, paper-backend status shell, tests, CI, EAS preview workflow, API update workflow, and shared-document drift checks.
 - Convergent S brand assets, light/dark theme tokens, accessible Liquid Glass surfaces, and an iOS TestFlight delivery profile.
 - Personal EAS project linkage and authenticated GitHub Packages configuration for preview and CI installs.
