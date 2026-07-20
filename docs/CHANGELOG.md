@@ -4,6 +4,8 @@
 
 ### Added
 
+- M3 Slice 6 — added an Exchanges tab with connector coverage, masked account/product permissions, configuration tests, and Owner-confirmed account disable. Raw credentials are never accepted or rendered by mobile. Vendors API client **0.11.0**.
+
 - M2 Slices 6–7 — a Strategies tab with paper configuration and enable/disable controls, position strategy attribution, Portfolio/PnL dashboard, venue/service Health view, and deduplicated Alerts with acknowledgement, vendoring API client **0.10.0**. M2 mobile monitoring is complete.
 
 - M2 Slice 5b mobile controls: active breaker badges plus Trader halt/read-only/venue-disable/resume actions and an OWNER-confirmed flatten action. The vendored `@ayenisholah/perpeto-api-client` **0.8.0** contract also presents `RECOVERING` positions and recovery/circuit-breaker exit reasons.

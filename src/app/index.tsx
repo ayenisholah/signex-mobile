@@ -31,6 +31,8 @@ import type {
   Strategy,
   SystemHealth,
   Venue,
+  VenueAccount,
+  VenueSummary,
 } from "@ayenisholah/perpeto-api-client";
 
 import { useAuth } from "@/auth/AuthContext";
@@ -960,13 +962,109 @@ function AlertsView() {
   </>;
 }
 
+function ExchangesView() {
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  const { controller, state } = useAuth();
+  const canTrade = useCanTrade();
+  const owner = state.kind === "AUTHENTICATED" && state.user.roles.includes("OWNER");
+  const [venues, setVenues] = useState<readonly VenueSummary[]>([]);
+  const [accounts, setAccounts] = useState<readonly VenueAccount[]>([]);
+  const [result, setResult] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState<string>();
+  const [error, setError] = useState<string>();
+  const refresh = useCallback(() => {
+    setError(undefined);
+    void Promise.all([
+      controller.client.listVenues(),
+      controller.client.listVenueAccounts(),
+    ]).then(([nextVenues, nextAccounts]) => {
+      setVenues(nextVenues);
+      setAccounts(nextAccounts);
+    }).catch((cause: unknown) => {
+      setError(cause instanceof Error ? cause.message : "Could not load exchange accounts.");
+    });
+  }, [controller]);
+  useEffect(() => queueMicrotask(refresh), [refresh]);
+  const run = async (id: string, action: () => Promise<unknown>, message: string) => {
+    setBusy(id);
+    setError(undefined);
+    try {
+      await action();
+      setResult((current) => ({ ...current, [id]: message }));
+      refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Exchange account action failed.");
+    } finally {
+      setBusy(undefined);
+    }
+  };
+  const disable = (account: VenueAccount) => Alert.alert(
+    `Disable ${account.alias}?`,
+    "This prevents connector use for every product on the account. Credentials remain encrypted for audited recovery.",
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Disable",
+        style: "destructive",
+        onPress: () => void run(
+          account.id,
+          () => controller.client.disableVenueAccount(account.id),
+          "Account disabled",
+        ),
+      },
+    ],
+  );
+  return <>
+    <Heading title="Exchanges" body="Masked CEX connections for sandbox and read-only shadow operation. Credentials can only be imported or rotated with the audited server CLI." />
+    {error === undefined ? null : <Text accessibilityRole="alert" style={{ color: theme.critical }}>{error}</Text>}
+    <Card>
+      <Text accessibilityRole="header" style={[styles.sectionTitle, { color: theme.textPrimary }]}>Connector coverage</Text>
+      {venues.map((venue) => <View key={venue.venue} style={styles.row}>
+        <View>
+          <Text style={{ color: theme.textPrimary, fontWeight: "700" }}>{venue.display_name}</Text>
+          <Text style={{ color: theme.textSecondary }}>{venue.products.join(" + ")} · {venue.sandbox_environment}</Text>
+        </View>
+        <View style={[styles.badge, { backgroundColor: theme.field }]}>
+          <Text style={[styles.badgeText, { color: theme.velocity }]}>{venue.configured_accounts} configured</Text>
+        </View>
+      </View>)}
+    </Card>
+    {accounts.length === 0 ? <Card><Text style={{ color: theme.textSecondary }}>No exchange accounts configured. Import one from the server CLI.</Text></Card> : accounts.map((account) => <Card key={account.id}>
+      <View style={styles.oppTop}>
+        <View>
+          <Text accessibilityRole="header" style={[styles.sectionTitle, { color: theme.textPrimary }]}>{account.alias}</Text>
+          <Text style={{ color: theme.textSecondary }}>{account.venue} · {account.masked_identity}</Text>
+        </View>
+        <View style={[styles.badge, { backgroundColor: theme.field }]}>
+          <Text style={[styles.badgeText, { color: account.enabled ? theme.signal : theme.critical }]}>{account.enabled ? account.certification_state : "DISABLED"}</Text>
+        </View>
+      </View>
+      {account.connections.map((connection) => <View key={connection.id} style={styles.legBlock}>
+        <Text style={[styles.legHeader, { color: theme.textPrimary }]}>{connection.product} · {connection.environment}</Text>
+        <Text style={{ color: theme.textSecondary }}>{connection.status} · read {connection.read_permission ? "yes" : "no"} · trade {connection.trade_permission ? "yes" : "no"} · withdrawal {connection.withdrawal_permission === true ? "ENABLED" : "off"}</Text>
+      </View>)}
+      {result[account.id] === undefined ? null : <Text style={{ color: theme.signal }}>{result[account.id]}</Text>}
+      {canTrade && account.enabled ? <Button disabled={busy === account.id} label="Test configuration" onPress={() => void run(
+        account.id,
+        async () => {
+          const test = await controller.client.testVenueAccount(account.id);
+          if (test.status !== "PASS") throw new Error(test.checks.join(" · "));
+        },
+        "Configuration passed",
+      )} /> : null}
+      {owner && account.enabled ? <Button destructive disabled={busy === account.id} label="Disable account" onPress={() => disable(account)} /> : null}
+    </Card>)}
+  </>;
+}
+
 function AuthenticatedHome() {
   const theme = useColorScheme() === "light" ? themes.light : themes.dark;
-  const [tab, setTab] = useState<"scanner" | "positions" | "strategies" | "portfolio" | "health" | "alerts" | "security">("scanner");
-  const tabs: readonly { readonly key: "scanner" | "positions" | "strategies" | "portfolio" | "health" | "alerts" | "security"; readonly label: string }[] = [
+  const [tab, setTab] = useState<"scanner" | "positions" | "strategies" | "exchanges" | "portfolio" | "health" | "alerts" | "security">("scanner");
+  const tabs: readonly { readonly key: "scanner" | "positions" | "strategies" | "exchanges" | "portfolio" | "health" | "alerts" | "security"; readonly label: string }[] = [
     { key: "scanner", label: "Scanner" },
     { key: "positions", label: "Positions" },
     { key: "strategies", label: "Strategies" },
+    { key: "exchanges", label: "Exchanges" },
     { key: "portfolio", label: "Portfolio" },
     { key: "health", label: "Health" },
     { key: "alerts", label: "Alerts" },
@@ -992,7 +1090,7 @@ function AuthenticatedHome() {
           );
         })}
       </View>
-      {tab === "scanner" ? <Scanner onOpened={() => setTab("positions")} /> : tab === "positions" ? <Positions /> : tab === "strategies" ? <Strategies /> : tab === "portfolio" ? <PortfolioDashboard /> : tab === "health" ? <HealthView /> : tab === "alerts" ? <AlertsView /> : <SecurityCenter />}
+      {tab === "scanner" ? <Scanner onOpened={() => setTab("positions")} /> : tab === "positions" ? <Positions /> : tab === "strategies" ? <Strategies /> : tab === "exchanges" ? <ExchangesView /> : tab === "portfolio" ? <PortfolioDashboard /> : tab === "health" ? <HealthView /> : tab === "alerts" ? <AlertsView /> : <SecurityCenter />}
     </>
   );
 }
