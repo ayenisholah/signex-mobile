@@ -81,3 +81,11 @@ Accepted entries are append-only. Supersede an earlier decision with a new ID in
 - Scope: Shared
 - Decision: M2 Slice 5a uses the existing effective unmatched-exposure limit (`RiskLimits::max_unmatched()`) and two consecutive scenario ticks to trigger corrective paper re-hedging. The engine separates real scan sleep from a configurable simulated-time step so the four-snapshot `t0→t3` path is exercised deterministically.
 - Consequences: This is a paper-fixture simplification for repeatable milestone evidence, not the live risk policy. The PRODUCT_SPEC §6.2 greater-of-USD-100/5-bps threshold with three seconds of elapsed persistence must be implemented before live execution and cannot be inferred from the tick counter.
+
+## DEC-0011 — M3 sandbox writes and read-only shadow boundary
+
+- Status: Accepted
+- Date: 2026-07-20
+- Scope: Backend
+- Decision: M3 introduces `SANDBOX` and `SHADOW` runtime modes. Only `SANDBOX` may submit external orders, and only to a connector account explicitly configured for a non-production testnet/demo environment. `SHADOW` may consume production public/private reads but routes every execution decision to a non-submitting recorder. `LIVE` remains fail-closed until M6. CEX credentials enter the shared v1 deployment only through an audited server-side administration CLI because DEC-0009 does not provide the step-up proof required for credential mutations.
+- Consequences: Environment/mode mismatches are fatal configuration errors. Mobile and HTTP APIs never accept raw CEX credentials in v1. M3 can advance routes through `PAPER_ONLY` and `SHADOW`; `PILOT` and `CERTIFIED_LIVE` require M6 authorization and evidence.
