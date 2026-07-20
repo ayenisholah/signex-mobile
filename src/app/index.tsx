@@ -18,6 +18,8 @@ import type {
   AccessRequest,
   Alert as ApiAlert,
   Controls,
+  ConnectorOrderPreview,
+  ConnectorOrderRequest,
   LinkedIdentity,
   Opportunity,
   OpportunityFilter,
@@ -1053,8 +1055,91 @@ function ExchangesView() {
         "Configuration passed",
       )} /> : null}
       {owner && account.enabled ? <Button destructive disabled={busy === account.id} label="Disable account" onPress={() => disable(account)} /> : null}
+      {canTrade && account.enabled ? <ConnectorOrderCard account={account} /> : null}
     </Card>)}
   </>;
+}
+
+function ConnectorOrderCard({ account }: { readonly account: VenueAccount }) {
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  const { controller } = useAuth();
+  const connection = account.connections[0];
+  const product = connection?.product ?? "LINEAR_PERPETUAL";
+  const symbol = account.venue === "OKX"
+    ? product === "SPOT" ? "BTC-USDT" : "BTC-USDT-SWAP"
+    : "BTCUSDT";
+  const [quantity, setQuantity] = useState("0.001");
+  const [price, setPrice] = useState("60000");
+  const [side, setSide] = useState<"BUY" | "SELL">("SELL");
+  const [clientOrderId, setClientOrderId] = useState(() => `mobile-${Date.now().toString(36)}`);
+  const [preview, setPreview] = useState<ConnectorOrderPreview>();
+  const [status, setStatus] = useState<string>();
+  const [error, setError] = useState<string>();
+  const [busy, setBusy] = useState(false);
+  if (connection === undefined) return null;
+  const request = (): ConnectorOrderRequest => ({
+    product,
+    symbol,
+    side,
+    base_quantity: quantity,
+    limit_price: price,
+    client_order_id: clientOrderId,
+  });
+  const loadPreview = async () => {
+    setBusy(true);
+    setError(undefined);
+    setStatus(undefined);
+    try {
+      setPreview(await controller.client.previewConnectorOrder(account.id, request()));
+    } catch (cause) {
+      setPreview(undefined);
+      setError(cause instanceof Error ? cause.message : "Order preview failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const submit = () => Alert.alert(
+    `Submit ${side} to ${account.venue} ${connection.environment}?`,
+    `Native ${preview?.native_quantity ?? quantity} ${symbol} at ${price}. This is allowed only on non-production funds.`,
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Submit sandbox order",
+        onPress: () => {
+          setBusy(true);
+          setError(undefined);
+          void controller.client.submitConnectorOrder(account.id, request()).then((result) => {
+            setStatus(`${result.state}${result.venue_order_id === null ? "" : ` · ${result.venue_order_id}`}`);
+            setClientOrderId(`mobile-${Date.now().toString(36)}`);
+            setPreview(undefined);
+          }).catch((cause: unknown) => {
+            setError(cause instanceof Error ? cause.message : "Sandbox submission failed.");
+          }).finally(() => setBusy(false));
+        },
+      },
+    ],
+  );
+  const edit = (setter: (value: string) => void) => (value: string) => {
+    setter(value);
+    setPreview(undefined);
+  };
+  return <View style={styles.legBlock}>
+    <Text style={[styles.legHeader, { color: theme.textPrimary }]}>Exact IOC preview · {product} · {symbol}</Text>
+    <View style={styles.pillRow}>
+      {(["BUY", "SELL"] as const).map((value) => <Pill key={value} label={value} active={side === value} onPress={() => { setSide(value); setPreview(undefined); }} />)}
+    </View>
+    <TextInput accessibilityLabel="Connector base quantity" value={quantity} onChangeText={edit(setQuantity)} keyboardType="decimal-pad" style={[styles.input, { color: theme.textPrimary, borderColor: theme.border }]} />
+    <TextInput accessibilityLabel="Connector limit price" value={price} onChangeText={edit(setPrice)} keyboardType="decimal-pad" style={[styles.input, { color: theme.textPrimary, borderColor: theme.border }]} />
+    <Button disabled={busy} label="Preview native order" onPress={() => void loadPreview()} />
+    {preview === undefined ? null : <View>
+      <Text selectable style={{ color: theme.textSecondary }}>Native {preview.native_quantity} · base {preview.equivalent_base_quantity} · Δ ${preview.projected_delta_usd}</Text>
+      <Text selectable numberOfLines={2} style={{ color: theme.textSecondary }}>Hash {preview.payload_hash}</Text>
+    </View>}
+    {preview !== undefined && connection.environment !== "PRODUCTION" ? <Button disabled={busy} label="Submit sandbox order" onPress={submit} /> : null}
+    {connection.environment === "PRODUCTION" ? <Text style={{ color: theme.warning }}>SHADOW: preview only. Production submission is blocked.</Text> : null}
+    {status === undefined ? null : <Text style={{ color: theme.signal }}>{status}</Text>}
+    {error === undefined ? null : <Text accessibilityRole="alert" style={{ color: theme.critical }}>{error}</Text>}
+  </View>;
 }
 
 function AuthenticatedHome() {

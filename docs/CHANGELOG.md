@@ -4,6 +4,8 @@
 
 ### Added
 
+- M3 Slice 18 — the Exchanges tab now previews exact native IOC quantity, equivalent base exposure, projected delta, and payload hash via client **0.12.0**. Non-production accounts support an explicit confirmation before submit; production accounts render SHADOW preview-only status and cannot submit.
+
 - M3 Slice 6 — added an Exchanges tab with connector coverage, masked account/product permissions, configuration tests, and Owner-confirmed account disable. Raw credentials are never accepted or rendered by mobile. Vendors API client **0.11.0**.
 
 - M2 Slices 6–7 — a Strategies tab with paper configuration and enable/disable controls, position strategy attribution, Portfolio/PnL dashboard, venue/service Health view, and deduplicated Alerts with acknowledgement, vendoring API client **0.10.0**. M2 mobile monitoring is complete.
