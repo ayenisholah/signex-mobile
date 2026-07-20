@@ -16,6 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import type {
   AccessRequest,
+  Controls,
   LinkedIdentity,
   Opportunity,
   OpportunityFilter,
@@ -25,6 +26,7 @@ import type {
   RiskLimits,
   RouteType,
   Session,
+  Venue,
 } from "@ayenisholah/perpeto-api-client";
 
 import { useAuth } from "@/auth/AuthContext";
@@ -776,6 +778,7 @@ function Positions() {
           Opened paper positions, their simulated fills, and realized PnL after close. Paper only — no live orders are placed.
         </Text>
       </View>
+      <EmergencyControlsCard />
       <View style={styles.scannerBar}>
         <Text maxFontSizeMultiplier={2} style={[styles.caption, { color: theme.textSecondary, textAlign: "left" }]}>
           {loading ? "Loading…" : `${positions.length} position${positions.length === 1 ? "" : "s"}`}
@@ -800,6 +803,74 @@ function Positions() {
         )}
       </Card>
     </>
+  );
+}
+
+function EmergencyControlsCard() {
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  const { controller, state } = useAuth();
+  const canTrade = useCanTrade();
+  const owner = state.kind === "AUTHENTICATED" && state.user.roles.includes("OWNER");
+  const [controls, setControls] = useState<Controls>();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const refresh = useCallback(() => {
+    void controller.client.getControls().then(setControls).catch((cause: unknown) => {
+      setError(cause instanceof Error ? cause.message : "Could not load emergency controls.");
+    });
+  }, [controller]);
+  useEffect(() => queueMicrotask(refresh), [refresh]);
+  const run = async (action: () => Promise<unknown>) => {
+    setBusy(true);
+    setError(undefined);
+    try {
+      await action();
+      refresh();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Emergency control failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const disable = (venue: Venue) => void run(() => controller.client.disableVenue(venue));
+  const confirmFlatten = () => Alert.alert(
+    "Flatten every paper position?",
+    "The engine will unwind all open paper positions and keep new risk halted until resume.",
+    [
+      { text: "Cancel", style: "cancel" },
+      { text: "Flatten", style: "destructive", onPress: () => void run(() => controller.client.flatten()) },
+    ],
+  );
+  return (
+    <Card>
+      <Text accessibilityRole="header" maxFontSizeMultiplier={2} style={[styles.sectionTitle, { color: theme.textPrimary }]}>Emergency controls</Text>
+      <View style={styles.badgeRow}>
+        {(controls?.breakers ?? []).map((breaker) => (
+          <View key={breaker.id} style={[styles.badge, { backgroundColor: theme.field }]}>
+            <Text maxFontSizeMultiplier={2} style={[styles.badgeText, { color: theme.critical }]}>
+              {breaker.scope_key ?? breaker.scope} · {breaker.action}
+            </Text>
+          </View>
+        ))}
+        {controls?.breakers.length === 0 ? <Text style={{ color: theme.signal }}>No active breakers</Text> : null}
+      </View>
+      {error === undefined ? null : <Text accessibilityRole="alert" style={{ color: theme.critical }}>{error}</Text>}
+      {!canTrade ? <Text style={{ color: theme.textSecondary }}>Trader access is required.</Text> : (
+        <>
+          <Button disabled={busy} label="Halt new risk" onPress={() => void run(() => controller.client.halt())} />
+          <Button disabled={busy} label="Read only" onPress={() => void run(() => controller.client.halt("READ_ONLY"))} />
+          <View style={styles.pillRow}>
+            {(["BINANCE", "BYBIT", "OKX"] as const).map((venue) => (
+              <Pressable key={venue} accessibilityRole="button" disabled={busy} onPress={() => disable(venue)} style={[styles.pill, { borderColor: theme.border }]}>
+                <Text style={{ color: theme.textSecondary }}>Disable {venue}</Text>
+              </Pressable>
+            ))}
+          </View>
+          {owner ? <Button destructive disabled={busy} label="Flatten all" onPress={confirmFlatten} /> : null}
+          <Button disabled={busy} label="Resume operator controls" onPress={() => void run(() => controller.client.resumeControls())} />
+        </>
+      )}
+    </Card>
   );
 }
 

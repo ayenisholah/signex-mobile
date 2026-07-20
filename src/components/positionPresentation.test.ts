@@ -19,5 +19,7 @@ describe("position presentation", () => {
     expect(exitReasonLabel("THRESHOLD_BREACH")).toBe("Threshold breach");
     expect(exitReasonLabel("VENUE_UNHEALTHY")).toBe("Venue unhealthy");
     expect(exitReasonLabel("MANUAL")).toBe("Manual");
+    expect(exitReasonLabel("RECOVERY_FAILURE")).toBe("Recovery flatten");
+    expect(exitReasonLabel("CIRCUIT_BREAKER")).toBe("Circuit breaker");
   });
 });

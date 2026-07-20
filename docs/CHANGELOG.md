@@ -4,6 +4,8 @@
 
 ### Added
 
+- M2 Slice 5b mobile controls: active breaker badges plus Trader halt/read-only/venue-disable/resume actions and an OWNER-confirmed flatten action. The vendored `@ayenisholah/perpeto-api-client` **0.8.0** contract also presents `RECOVERING` positions and recovery/circuit-breaker exit reasons.
+
 - M2 Slice 5a — position cards now show a persistent **RE-HEDGED** badge when corrective hedge orders are present and a readable funding-flip, threshold, venue-health, or manual exit reason after close. Consumes the verified `@ayenisholah/perpeto-api-client@0.7.0` vendored contract with `residual_breach_ticks` and nullable `exit_reason`.
 - M2 Slice 4 — the Positions screen gains realized-PnL and funding display and a **Close position** action on `OPEN` positions (OWNER/TRADER only, via `closePosition`), showing captured funding, realized PnL (green/red), and the close time once closed. Consumes `@ayenisholah/perpeto-api-client@0.6.0`. Paper only — no live orders are placed.
 - M2 Slice 3 — a **Positions** tab (segmented `[Scanner | Positions | Security]` home) listing opened paper positions from `GET /api/v1/positions` via a `usePositions` hook, showing state, per-leg venue/symbol/fill/fees, residual delta, and reserved capital. The opportunity detail sheet gains an **Open paper position** action (shown for `within_limits` routes and OWNER/TRADER roles) that calls `createPosition` with an idempotency key and routes to Positions. Consumes `@ayenisholah/perpeto-api-client@0.5.0`. Paper only — no live orders are placed.

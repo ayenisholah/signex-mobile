@@ -14,6 +14,8 @@ const EXIT_REASON_LABELS: Readonly<Record<ExitReason, string>> = {
   THRESHOLD_BREACH: "Threshold breach",
   VENUE_UNHEALTHY: "Venue unhealthy",
   MANUAL: "Manual",
+  RECOVERY_FAILURE: "Recovery flatten",
+  CIRCUIT_BREAKER: "Circuit breaker",
 };
 
 export function wasRehedged(position: HedgeAwarePosition): boolean {
