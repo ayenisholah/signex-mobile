@@ -4,6 +4,8 @@
 
 ### Added
 
+- M3 Slice 19 — the Exchanges tab now shows exact connector order history, reconciliation status/discrepancy counts, and the latest reconciled balances and venue positions using vendored API client **0.13.0**. Decimal values remain strings and no credential material reaches mobile.
+
 - M3 Slice 18 — the Exchanges tab now previews exact native IOC quantity, equivalent base exposure, projected delta, and payload hash via client **0.12.0**. Non-production accounts support an explicit confirmation before submit; production accounts render SHADOW preview-only status and cannot submit.
 
 - M3 Slice 6 — added an Exchanges tab with connector coverage, masked account/product permissions, configuration tests, and Owner-confirmed account disable. Raw credentials are never accepted or rendered by mobile. Vendors API client **0.11.0**.

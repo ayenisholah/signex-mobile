@@ -18,6 +18,8 @@ import type {
   AccessRequest,
   Alert as ApiAlert,
   Controls,
+  ConnectorAccounting,
+  ConnectorOrder,
   ConnectorOrderPreview,
   ConnectorOrderRequest,
   LinkedIdentity,
@@ -27,6 +29,7 @@ import type {
   Position,
   Portfolio,
   PositionLeg,
+  ReconciliationRun,
   RiskLimits,
   RouteType,
   Session,
@@ -971,6 +974,9 @@ function ExchangesView() {
   const owner = state.kind === "AUTHENTICATED" && state.user.roles.includes("OWNER");
   const [venues, setVenues] = useState<readonly VenueSummary[]>([]);
   const [accounts, setAccounts] = useState<readonly VenueAccount[]>([]);
+  const [accounting, setAccounting] = useState<Readonly<Record<string, ConnectorAccounting>>>({});
+  const [orders, setOrders] = useState<readonly ConnectorOrder[]>([]);
+  const [reconciliations, setReconciliations] = useState<readonly ReconciliationRun[]>([]);
   const [result, setResult] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<string>();
   const [error, setError] = useState<string>();
@@ -979,9 +985,18 @@ function ExchangesView() {
     void Promise.all([
       controller.client.listVenues(),
       controller.client.listVenueAccounts(),
-    ]).then(([nextVenues, nextAccounts]) => {
+      controller.client.listConnectorOrders(),
+      controller.client.listReconciliations(),
+    ]).then(async ([nextVenues, nextAccounts, nextOrders, nextReconciliations]) => {
       setVenues(nextVenues);
       setAccounts(nextAccounts);
+      setOrders(nextOrders);
+      setReconciliations(nextReconciliations);
+      const snapshots = await Promise.all(nextAccounts.map(async (account) => [
+        account.id,
+        await controller.client.getConnectorAccounting(account.id),
+      ] as const));
+      setAccounting(Object.fromEntries(snapshots));
     }).catch((cause: unknown) => {
       setError(cause instanceof Error ? cause.message : "Could not load exchange accounts.");
     });
@@ -1045,6 +1060,13 @@ function ExchangesView() {
         <Text style={[styles.legHeader, { color: theme.textPrimary }]}>{connection.product} · {connection.environment}</Text>
         <Text style={{ color: theme.textSecondary }}>{connection.status} · read {connection.read_permission ? "yes" : "no"} · trade {connection.trade_permission ? "yes" : "no"} · withdrawal {connection.withdrawal_permission === true ? "ENABLED" : "off"}</Text>
       </View>)}
+      {(accounting[account.id]?.balances ?? []).map((balance) => <Text selectable key={balance.asset} style={{ color: theme.textSecondary }}>
+        {balance.asset} · total {balance.total} · available {balance.available} · locked {balance.locked}
+      </Text>)}
+      {(accounting[account.id]?.positions ?? []).map((position) => <Text selectable key={`${position.symbol}:${position.product}`} style={{ color: theme.textSecondary }}>
+        {position.symbol} · qty {position.quantity} · entry {position.entry_price} · mark {position.mark_price}
+      </Text>)}
+      {accounting[account.id]?.run_id === null ? <Text style={{ color: theme.warning }}>Awaiting first reconciliation snapshot.</Text> : null}
       {result[account.id] === undefined ? null : <Text style={{ color: theme.signal }}>{result[account.id]}</Text>}
       {canTrade && account.enabled ? <Button disabled={busy === account.id} label="Test configuration" onPress={() => void run(
         account.id,
@@ -1057,6 +1079,21 @@ function ExchangesView() {
       {owner && account.enabled ? <Button destructive disabled={busy === account.id} label="Disable account" onPress={() => disable(account)} /> : null}
       {canTrade && account.enabled ? <ConnectorOrderCard account={account} /> : null}
     </Card>)}
+    <Card>
+      <Text accessibilityRole="header" style={[styles.sectionTitle, { color: theme.textPrimary }]}>Recent connector orders</Text>
+      {orders.length === 0 ? <Text style={{ color: theme.textSecondary }}>No connector orders recorded.</Text> : orders.slice(0, 10).map((order) => <View key={order.id} style={styles.legBlock}>
+        <Text style={[styles.legHeader, { color: theme.textPrimary }]}>{order.venue} · {order.side} {order.symbol} · {order.state}</Text>
+        <Text selectable style={{ color: theme.textSecondary }}>Native {order.native_quantity} @ {order.native_price} · base {order.equivalent_base_quantity} · Δ ${order.projected_delta_usd}</Text>
+        <Text selectable numberOfLines={1} style={{ color: theme.textSecondary }}>Hash {order.payload_hash}</Text>
+      </View>)}
+    </Card>
+    <Card>
+      <Text accessibilityRole="header" style={[styles.sectionTitle, { color: theme.textPrimary }]}>Reconciliation</Text>
+      {reconciliations.length === 0 ? <Text style={{ color: theme.textSecondary }}>No reconciliation runs recorded.</Text> : reconciliations.slice(0, 10).map((run) => <View key={run.id} style={styles.row}>
+        <Text style={{ color: run.discrepancies === 0 ? theme.signal : theme.critical }}>{run.venue} · {run.status}</Text>
+        <Text style={{ color: theme.textSecondary }}>{run.discrepancies} discrepancies · {run.fills_seen} fills</Text>
+      </View>)}
+    </Card>
   </>;
 }
 
