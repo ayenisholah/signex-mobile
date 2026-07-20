@@ -2,8 +2,8 @@
 
 ## Snapshot
 
-- Milestone: M2 Slice 5a — paper re-hedge and auto-exit monitoring
-- Overall state: In progress
+- Milestone: M3 — CEX integrations
+- Overall state: In progress (mobile monitoring implemented)
 - Last verified: 2026-07-20
 
 ## Completed
@@ -13,7 +13,7 @@
 - Convergent S branding, production assets, semantic light/dark tokens, and accessible Liquid Glass surfaces implemented.
 - Personal EAS project `@ayenisholah/signex-mobile`, paper API environment, GitHub Packages authentication path, iOS registration, and update URL configured.
 - iOS App Store build `0.1.0 (3)` accepted by EAS Submit for TestFlight processing; App Store Connect app `6790819875` and the `Team (Expo)` tester group are configured.
-- Consumes the verified `@ayenisholah/perpeto-api-client@0.7.0` vendored tarball exactly while GitHub Packages publication is pending.
+- Consumes the locally verified `@ayenisholah/perpeto-api-client@0.13.0` vendored tarball exactly; no remote package publication was performed.
 - Added the M2 Scanner (Slices 1–2), Slice 3 Positions/open action, Slice 4 close/funding/PnL display, and Slice 5a persistent re-hedge badges plus auto/manual exit reasons.
 - Added Apple/Google native entry points, a fail-closed authentication state machine, first-Owner bootstrap, pending isolation, privileged TOTP/recovery enrollment, Secure Store refresh rotation, Owner access approval, identity linking/unlinking, session revocation, logout, and deletion UI.
 - Declared the Sign in with Apple capability for `com.signex.mobile` and the EAS contract for Google iOS/Web OAuth configuration.
@@ -22,8 +22,8 @@
 
 ## Not completed
 
-- The backend provider-verification and session HTTP runtime is not implemented, so device flows cannot complete against staging yet.
-- Strategy configuration, portfolio, analytics, alert, audit, and comprehensive settings/role administration screens do not exist. Position monitoring now covers paper open, corrective re-hedge, manual/automatic exit, funding capture, and realized PnL; recovery and breaker controls remain Slice 5b.
+- Credentialed CEX sandbox/shadow evidence and primary connector WebSocket streams are not complete, so M3 and production trading remain unavailable.
+- Real-device, accessibility, and security certification evidence is still pending.
 - The versioned backend client package is consumed from a checked-in deterministic tarball but is not yet published to GitHub Packages.
 - No M1A real-device, accessibility, or security certification evidence exists.
 
@@ -36,4 +36,4 @@
 
 ## Next verified task
 
-Complete the backend authentication runtime, publish client `0.2.0`, configure provider values, verify non-interactive iOS TestFlight delivery, then execute the real-iPhone social/MFA/session matrix.
+Import least-privilege server-side test credentials, run the M3 sandbox/shadow certification matrix, and verify the Exchanges monitoring path on a real device.

@@ -34,6 +34,8 @@
 
 ### Changed
 
+- Updated repository and milestone status to reflect complete M2 mobile monitoring, the client 0.13 connector surfaces, and the remaining M3 WebSocket/certification gates.
+
 - Rebranded the app from **Signex** to **Perpeto** ("The perpetual edge"): a new perpetual-loop mark (interlocking mint/sky ribbon) for the icon, adaptive icon, splash and wordmark; the "Quant Terminal" palette (near-black ink `#0A0C10`, mint accent `#34E0A1`, sky secondary `#38BDF8`); and updated user-facing copy. Brand assets are generated from `assets/brand/perpeto-*.svg` via `npm run brand:render`. The vendored contract package is renamed to `@ayenisholah/perpeto-api-client` (client class `PerpetoClient`). The `com.signex.mobile` bundle ID, `signex://` deep-link scheme, `signex-mobile` slug, EAS linkage, and `signex.auth.*` secure-store keys are intentionally preserved so no re-provisioning or forced sign-out occurs.
 - Updated the sign-in copy for the shared v1 open-registration backend (DEC-0009): new accounts get full access immediately, so the screen no longer promises Owner approval. The pending-approval screen and auth state machine remain as the fallback for gated (v2/isolated) deployments.
 - Replaced the vendor Apple and Google sign-in widgets with a shared `ProviderButton` that renders both as identical 52pt pills (SF Symbol Apple glyph, official multicolor Google mark) following each provider's brand guidelines, resolving the mismatched styling on the sign-in screen. The underlying `expo-apple-authentication` and Google native sign-in flows are unchanged.
