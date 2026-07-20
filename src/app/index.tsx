@@ -16,16 +16,20 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import type {
   AccessRequest,
+  Alert as ApiAlert,
   Controls,
   LinkedIdentity,
   Opportunity,
   OpportunityFilter,
   OpportunitySort,
   Position,
+  Portfolio,
   PositionLeg,
   RiskLimits,
   RouteType,
   Session,
+  Strategy,
+  SystemHealth,
   Venue,
 } from "@ayenisholah/perpeto-api-client";
 
@@ -722,6 +726,9 @@ function PositionCard({
           </View>
         </View>
       </View>
+      {position.strategy_id === null ? null : (
+        <Text maxFontSizeMultiplier={2} style={[styles.caption, { color: theme.textSecondary, textAlign: "left" }]}>Strategy {position.strategy_id}</Text>
+      )}
       <View style={styles.oppMetrics}>
         <Text maxFontSizeMultiplier={2} style={[styles.oppMetric, { color: theme.textSecondary }]}>Notional {formatUsd(position.target_notional)}</Text>
         <Text maxFontSizeMultiplier={2} style={[styles.oppMetric, { color: theme.textSecondary }]}>Reserved {formatUsd(position.reserved_capital)}</Text>
@@ -874,12 +881,95 @@ function EmergencyControlsCard() {
   );
 }
 
+function Strategies() {
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  const { controller } = useAuth();
+  const canTrade = useCanTrade();
+  const [strategies, setStrategies] = useState<readonly Strategy[]>([]);
+  const [name, setName] = useState("BTC basis paper");
+  const [minApr, setMinApr] = useState("0.08");
+  const [error, setError] = useState<string>();
+  const refresh = useCallback(() => void controller.client.listStrategies().then(setStrategies).catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Could not load strategies.")), [controller]);
+  useEffect(() => queueMicrotask(refresh), [refresh]);
+  const create = async () => {
+    const threshold = Number(minApr);
+    if (!Number.isFinite(threshold)) { setError("Enter a valid APR threshold."); return; }
+    const strategy: Strategy = {
+      id: "00000000-0000-0000-0000-000000000000", name, enabled: false,
+      current: {
+        version: 1, creator: "server", created_at: new Date().toISOString(), mode: "PAPER",
+        route_types: ["PERP_PERP"], allowed_venues: ["BINANCE", "BYBIT", "OKX"], allowed_assets: ["BTC", "ETH"],
+        min_net_apr: threshold, min_profitability: 0.65, min_forecast_coverage: 0.65, max_time_to_funding_minutes: 480, max_basis_bps: 80,
+        allocation: { method: "FIXED", value: 1000 }, max_concurrent: 2, cooldown_seconds: 14400, hold_seconds: 1209600,
+        auto_compound: { enabled: false, reinvest_fraction: 0.5, minimum_reinvest_amount: 25 }, exit_net_apr: threshold / 2, max_drawdown_fraction: 0.03,
+      },
+    };
+    try { await controller.client.createStrategy(strategy); refresh(); } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not create strategy."); }
+  };
+  const toggle = async (strategy: Strategy) => {
+    try { if (strategy.enabled) await controller.client.disableStrategy(strategy.id); else await controller.client.enableStrategy(strategy.id); refresh(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Could not update strategy."); }
+  };
+  return <>
+    <Heading title="Strategies" body="Versioned server-side paper automation. Editing creates an immutable version; enablement controls new entries." />
+    {canTrade ? <Card>
+      <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>Create strategy</Text>
+      <TextInput accessibilityLabel="Strategy name" value={name} onChangeText={setName} style={[styles.input, { color: theme.textPrimary, borderColor: theme.border }]} />
+      <TextInput accessibilityLabel="Minimum net APR" value={minApr} onChangeText={setMinApr} keyboardType="decimal-pad" style={[styles.input, { color: theme.textPrimary, borderColor: theme.border }]} />
+      <Button label="Create paper strategy" onPress={() => void create()} />
+    </Card> : null}
+    {error === undefined ? null : <Text accessibilityRole="alert" style={{ color: theme.critical }}>{error}</Text>}
+    {strategies.map((strategy) => <Card key={strategy.id}>
+      <Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>{strategy.name}</Text>
+      <Text style={{ color: theme.textSecondary }}>v{strategy.current.version} · {strategy.enabled ? "Enabled" : "Paused"} · APR ≥ {(strategy.current.min_net_apr * 100).toFixed(1)}%</Text>
+      <Text style={{ color: theme.textSecondary }}>{strategy.current.allocation.method} · max {strategy.current.max_concurrent} positions</Text>
+      {canTrade ? <Button label={strategy.enabled ? "Disable" : "Enable"} onPress={() => void toggle(strategy)} /> : null}
+    </Card>)}
+  </>;
+}
+
+function PortfolioDashboard() {
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  const { controller } = useAuth(); const [portfolio, setPortfolio] = useState<Portfolio>(); const [error, setError] = useState<string>();
+  const refresh = useCallback(() => void controller.client.getPortfolio().then(setPortfolio).catch((cause: unknown) => setError(cause instanceof Error ? cause.message : "Could not load portfolio.")), [controller]);
+  useEffect(() => queueMicrotask(refresh), [refresh]);
+  return <><Heading title="Portfolio" body="Paper equity, allocation, and PnL from positions, fills, fees, and captured funding." />
+    {error === undefined ? null : <Text accessibilityRole="alert" style={{ color: theme.critical }}>{error}</Text>}
+    {portfolio === undefined ? <ActivityIndicator /> : <>
+      <Card><Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>${portfolio.equity.toFixed(2)} equity</Text><Text style={{ color: theme.textSecondary }}>${portfolio.deployable_equity.toFixed(2)} deployable · ${portfolio.deployed_capital.toFixed(2)} deployed</Text></Card>
+      <Card><Text style={[styles.sectionTitle, { color: theme.textPrimary }]}>PnL ${portfolio.pnl.net.toFixed(2)}</Text><Text style={{ color: theme.textSecondary }}>Funding ${portfolio.pnl.realized_funding.toFixed(2)} · trading ${portfolio.pnl.realized_trading.toFixed(2)} · unrealized ${portfolio.pnl.unrealized_leg.toFixed(2)} · fees ${portfolio.pnl.fees.toFixed(2)}</Text></Card>
+      <Card>{portfolio.by_venue.map((item) => <Text key={item.key} style={{ color: theme.textSecondary }}>{item.key} · ${item.deployed_capital.toFixed(2)} · {(item.fraction * 100).toFixed(1)}%</Text>)}</Card>
+    </>}
+  </>;
+}
+
+function HealthView() {
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark; const { controller } = useAuth(); const [health, setHealth] = useState<SystemHealth>();
+  useEffect(() => { void controller.client.getSystemHealth().then(setHealth); }, [controller]);
+  return <><Heading title="Health" body="Synthetic paper-clock venue freshness, connection state, clock drift, and service heartbeats." />
+    <Card>{(health?.venues ?? []).map((venue) => <Text key={venue.venue} style={{ color: venue.status === "HEALTHY" ? theme.signal : theme.critical }}>{venue.venue} · {venue.status} · age {venue.market_data_age_seconds}s · drift {venue.clock_drift_ms}ms</Text>)}</Card>
+    <Card>{(health?.services ?? []).map((service) => <Text key={service.service} style={{ color: theme.textSecondary }}>{service.service} · {service.status} · {new Date(service.observed_at).toLocaleTimeString()}</Text>)}</Card>
+  </>;
+}
+
+function AlertsView() {
+  const theme = useColorScheme() === "light" ? themes.light : themes.dark; const { controller } = useAuth(); const [alerts, setAlerts] = useState<readonly ApiAlert[]>([]);
+  const refresh = useCallback(() => void controller.client.listAlerts().then(setAlerts), [controller]); useEffect(() => queueMicrotask(refresh), [refresh]);
+  return <><Heading title="Alerts" body="Deduplicated paper risk and strategy events with durable acknowledgement." />
+    {alerts.length === 0 ? <Card><Text style={{ color: theme.textSecondary }}>No alerts.</Text></Card> : alerts.map((item) => <Card key={item.id}><Text style={[styles.sectionTitle, { color: item.severity === "CRITICAL" ? theme.critical : theme.textPrimary }]}>{item.title}</Text><Text style={{ color: theme.textSecondary }}>{item.message}</Text>{item.acknowledged_at === null ? <Button label="Acknowledge" onPress={() => void controller.client.acknowledgeAlert(item.id).then(refresh)} /> : <Text style={{ color: theme.signal }}>Acknowledged</Text>}</Card>)}
+  </>;
+}
+
 function AuthenticatedHome() {
   const theme = useColorScheme() === "light" ? themes.light : themes.dark;
-  const [tab, setTab] = useState<"scanner" | "positions" | "security">("scanner");
-  const tabs: readonly { readonly key: "scanner" | "positions" | "security"; readonly label: string }[] = [
+  const [tab, setTab] = useState<"scanner" | "positions" | "strategies" | "portfolio" | "health" | "alerts" | "security">("scanner");
+  const tabs: readonly { readonly key: "scanner" | "positions" | "strategies" | "portfolio" | "health" | "alerts" | "security"; readonly label: string }[] = [
     { key: "scanner", label: "Scanner" },
     { key: "positions", label: "Positions" },
+    { key: "strategies", label: "Strategies" },
+    { key: "portfolio", label: "Portfolio" },
+    { key: "health", label: "Health" },
+    { key: "alerts", label: "Alerts" },
     { key: "security", label: "Security" },
   ];
   return (
@@ -902,7 +992,7 @@ function AuthenticatedHome() {
           );
         })}
       </View>
-      {tab === "scanner" ? <Scanner onOpened={() => setTab("positions")} /> : tab === "positions" ? <Positions /> : <SecurityCenter />}
+      {tab === "scanner" ? <Scanner onOpened={() => setTab("positions")} /> : tab === "positions" ? <Positions /> : tab === "strategies" ? <Strategies /> : tab === "portfolio" ? <PortfolioDashboard /> : tab === "health" ? <HealthView /> : tab === "alerts" ? <AlertsView /> : <SecurityCenter />}
     </>
   );
 }
