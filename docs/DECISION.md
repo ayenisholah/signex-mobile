@@ -73,3 +73,11 @@ Accepted entries are append-only. Supersede an earlier decision with a new ID in
 - Scope: Shared
 - Decision: Version 1 runs a single shared backend for development and TestFlight. Gate a self-service registration mode behind `PERPETO_OPEN_REGISTRATION` (default false). When enabled, a new social sign-in is admitted immediately as an active account with the full privileged role set (`OWNER`, `TRADER`, `APPROVER`), and TOTP MFA is waived, so each tester can exercise the complete app without a pending queue, Owner approval, or authenticator setup. This deliberately relaxes DEC-0007's "open registration creates a `PENDING` account; approval initially grants Viewer" and the PRODUCT_SPEC mandatory-privileged-role-MFA rule for this deployment only. Version 2 provisions an isolated backend per user and restores gated approval and MFA; this decision is superseded at that point.
 - Consequences: The flag is off by default, so isolated or production deployments keep the strict DEC-0007 flow — the pending-approval and Owner-approval endpoints, screens, and the one-use bootstrap-Owner path remain in the codebase and behave unchanged when the flag is unset. Because every open-registration user is a privileged Owner without MFA, step-up-gated and identity-linking flows that require a TOTP proof are not usable under the flag; they return with v2 isolation. The mobile client shows instant-access sign-in copy for the shared v1 build. The waiver is a documented, reversible deployment policy applied in the service layer (`compute_next`), not in `funding_arb_domain::auth`, whose invariants stay strict.
+
+## DEC-0010 — Deterministic M2 paper supervision thresholds
+
+- Status: Accepted
+- Date: 2026-07-20
+- Scope: Shared
+- Decision: M2 Slice 5a uses the existing effective unmatched-exposure limit (`RiskLimits::max_unmatched()`) and two consecutive scenario ticks to trigger corrective paper re-hedging. The engine separates real scan sleep from a configurable simulated-time step so the four-snapshot `t0→t3` path is exercised deterministically.
+- Consequences: This is a paper-fixture simplification for repeatable milestone evidence, not the live risk policy. The PRODUCT_SPEC §6.2 greater-of-USD-100/5-bps threshold with three seconds of elapsed persistence must be implemented before live execution and cannot be inferred from the tick counter.

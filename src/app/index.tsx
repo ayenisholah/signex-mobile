@@ -29,6 +29,7 @@ import type {
 
 import { useAuth } from "@/auth/AuthContext";
 import { GlassSurface } from "@/components/GlassSurface";
+import { exitReasonLabel, wasRehedged } from "@/components/positionPresentation";
 import { ProviderButton } from "@/components/ProviderButton";
 import { themes, type Theme } from "@/theme/tokens";
 
@@ -690,6 +691,7 @@ function PositionCard({
 }) {
   const theme = useColorScheme() === "light" ? themes.light : themes.dark;
   const open = position.state === "OPEN";
+  const rehedged = wasRehedged(position);
   const [closing, setClosing] = useState(false);
   const close = async () => {
     setClosing(true);
@@ -705,10 +707,17 @@ function PositionCard({
         <Text maxFontSizeMultiplier={2} style={[styles.oppRoute, { color: theme.textPrimary }]}>
           {position.underlying} · long {position.long_leg.venue} → short {position.short_leg.venue}
         </Text>
-        <View style={[styles.badge, { backgroundColor: theme.field }]}>
-          <Text maxFontSizeMultiplier={2} style={[styles.badgeText, { color: open ? theme.signal : theme.velocity }]}>
-            {position.state}
-          </Text>
+        <View style={styles.badgeRow}>
+          {rehedged ? (
+            <View style={[styles.badge, { backgroundColor: theme.field }]}>
+              <Text maxFontSizeMultiplier={2} style={[styles.badgeText, { color: theme.velocity }]}>RE-HEDGED</Text>
+            </View>
+          ) : null}
+          <View style={[styles.badge, { backgroundColor: theme.field }]}>
+            <Text maxFontSizeMultiplier={2} style={[styles.badgeText, { color: open ? theme.signal : theme.velocity }]}>
+              {position.state}
+            </Text>
+          </View>
         </View>
       </View>
       <View style={styles.oppMetrics}>
@@ -720,6 +729,9 @@ function PositionCard({
         <View style={styles.oppMetrics}>
           <Text maxFontSizeMultiplier={2} style={[styles.oppMetric, { color: theme.textSecondary }]}>Funding {formatUsd(position.funding_captured)}</Text>
           <Text maxFontSizeMultiplier={2} style={[styles.oppMetric, { color: position.realized_pnl >= 0 ? theme.signal : theme.critical }]}>PnL {formatUsd(position.realized_pnl)}</Text>
+          {position.exit_reason === null ? null : (
+            <Text maxFontSizeMultiplier={2} style={[styles.oppMetric, { color: theme.textSecondary }]}>Exit {exitReasonLabel(position.exit_reason)}</Text>
+          )}
           {position.closed_at === undefined ? null : (
             <Text maxFontSizeMultiplier={2} style={[styles.oppMetric, { color: theme.textSecondary }]}>Closed {formatClock(position.closed_at)}</Text>
           )}
@@ -874,6 +886,7 @@ const styles = StyleSheet.create({
   oppMetrics: { flexDirection: "row", flexWrap: "wrap", gap: 16 },
   oppMetric: { fontSize: 14, fontVariant: ["tabular-nums"] },
   badge: { borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+  badgeRow: { alignItems: "flex-end", flexDirection: "row", flexWrap: "wrap", gap: 6, justifyContent: "flex-end" },
   badgeText: { fontSize: 12, fontWeight: "800", letterSpacing: 0.5 },
   pillRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   pill: { borderRadius: 999, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 8 },
