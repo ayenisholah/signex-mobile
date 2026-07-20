@@ -679,9 +679,26 @@ function LegCard({ label, leg }: { readonly label: string; readonly leg: Positio
   );
 }
 
-function PositionCard({ position }: { readonly position: Position }) {
+function PositionCard({
+  position,
+  canTrade,
+  onClose,
+}: {
+  readonly position: Position;
+  readonly canTrade: boolean;
+  readonly onClose: (id: string) => Promise<void>;
+}) {
   const theme = useColorScheme() === "light" ? themes.light : themes.dark;
   const open = position.state === "OPEN";
+  const [closing, setClosing] = useState(false);
+  const close = async () => {
+    setClosing(true);
+    try {
+      await onClose(position.id);
+    } finally {
+      setClosing(false);
+    }
+  };
   return (
     <View style={[styles.oppRow, { borderColor: theme.border }]}>
       <View style={styles.oppTop}>
@@ -689,7 +706,7 @@ function PositionCard({ position }: { readonly position: Position }) {
           {position.underlying} · long {position.long_leg.venue} → short {position.short_leg.venue}
         </Text>
         <View style={[styles.badge, { backgroundColor: theme.field }]}>
-          <Text maxFontSizeMultiplier={2} style={[styles.badgeText, { color: open ? theme.signal : theme.critical }]}>
+          <Text maxFontSizeMultiplier={2} style={[styles.badgeText, { color: open ? theme.signal : theme.velocity }]}>
             {position.state}
           </Text>
         </View>
@@ -699,21 +716,52 @@ function PositionCard({ position }: { readonly position: Position }) {
         <Text maxFontSizeMultiplier={2} style={[styles.oppMetric, { color: theme.textSecondary }]}>Reserved {formatUsd(position.reserved_capital)}</Text>
         <Text maxFontSizeMultiplier={2} style={[styles.oppMetric, { color: theme.textSecondary }]}>Residual {formatUsd(position.residual_delta_usd)}</Text>
       </View>
+      {open ? null : (
+        <View style={styles.oppMetrics}>
+          <Text maxFontSizeMultiplier={2} style={[styles.oppMetric, { color: theme.textSecondary }]}>Funding {formatUsd(position.funding_captured)}</Text>
+          <Text maxFontSizeMultiplier={2} style={[styles.oppMetric, { color: position.realized_pnl >= 0 ? theme.signal : theme.critical }]}>PnL {formatUsd(position.realized_pnl)}</Text>
+          {position.closed_at === undefined ? null : (
+            <Text maxFontSizeMultiplier={2} style={[styles.oppMetric, { color: theme.textSecondary }]}>Closed {formatClock(position.closed_at)}</Text>
+          )}
+        </View>
+      )}
       <LegCard label="Long" leg={position.long_leg} />
       <LegCard label="Short" leg={position.short_leg} />
+      {open && canTrade ? (
+        <View style={{ marginTop: 12 }}>
+          <Button disabled={closing} label={closing ? "Closing…" : "Close position"} onPress={() => void close()} />
+        </View>
+      ) : null}
     </View>
   );
 }
 
 function Positions() {
   const theme = useColorScheme() === "light" ? themes.light : themes.dark;
+  const { controller } = useAuth();
+  const canTrade = useCanTrade();
   const { positions, loading, error, reload } = usePositions();
+  const [actionError, setActionError] = useState<string>();
+
+  const handleClose = useCallback(
+    async (id: string) => {
+      setActionError(undefined);
+      try {
+        await controller.client.closePosition(id);
+        reload();
+      } catch (cause) {
+        setActionError(cause instanceof Error ? cause.message : "Could not close the position.");
+      }
+    },
+    [controller, reload],
+  );
+
   return (
     <>
       <View style={styles.headingBlock}>
         <Text accessibilityRole="header" maxFontSizeMultiplier={2} style={[styles.title, { color: theme.textPrimary }]}>Positions</Text>
         <Text maxFontSizeMultiplier={2} style={[styles.body, { color: theme.textSecondary }]}>
-          Opened paper positions and their simulated fills. Paper only — no live orders are placed.
+          Opened paper positions, their simulated fills, and realized PnL after close. Paper only — no live orders are placed.
         </Text>
       </View>
       <View style={styles.scannerBar}>
@@ -725,6 +773,7 @@ function Positions() {
         </Pressable>
       </View>
       {error === undefined ? null : <Text accessibilityRole="alert" style={{ color: theme.critical }}>{error}</Text>}
+      {actionError === undefined ? null : <Text accessibilityRole="alert" style={{ color: theme.critical }}>{actionError}</Text>}
       <Card>
         {loading && positions.length === 0 ? (
           <ActivityIndicator accessibilityLabel="Loading positions" />
@@ -733,7 +782,9 @@ function Positions() {
             No paper positions yet. Open one from an opportunity in the Scanner.
           </Text>
         ) : (
-          positions.map((position) => <PositionCard key={position.id} position={position} />)
+          positions.map((position) => (
+            <PositionCard key={position.id} position={position} canTrade={canTrade} onClose={handleClose} />
+          ))
         )}
       </Card>
     </>

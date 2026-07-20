@@ -3,7 +3,7 @@
   "main": "expo-router/entry",
   "version": "0.2.0",
   "dependencies": {
-    "@ayenisholah/perpeto-api-client": "file:vendor/ayenisholah-perpeto-api-client-0.5.0.tgz",
+    "@ayenisholah/perpeto-api-client": "file:vendor/ayenisholah-perpeto-api-client-0.6.0.tgz",
     "@expo/ui": "~57.0.7",
     "@react-native-google-signin/google-signin": "^16.1.2",
     "expo": "~57.0.7",
